@@ -115,8 +115,17 @@ function Register() {
     setOtpSending(true)
     setOtpError('')
     try {
-      await authAPI.sendOtp(formData.email)
-      toast.success('Verification code sent! Code expires in 5 minutes.')
+      const response = await authAPI.sendOtp(formData.email)
+      const data = response.data || {}
+      if (data.devOtp) {
+        toast.success(`Verification code: ${data.devOtp}`, { duration: 10000 })
+        const digits = data.devOtp.toString().split('').slice(0, 6)
+        const newVals = ['', '', '', '', '', '']
+        digits.forEach((d, i) => { newVals[i] = d })
+        setOtpValues(newVals)
+      } else {
+        toast.success('Verification code sent! Code expires in 5 minutes.')
+      }
       setOtpSent(true)
       startCooldown()
       startExpiryTimer()
@@ -247,8 +256,17 @@ function Register() {
     setOtpError('')
     setOtpValues(['', '', '', '', '', ''])
     try {
-      await authAPI.sendOtp(formData.email)
-      toast.success('New 5-minute code sent!')
+      const response = await authAPI.sendOtp(formData.email)
+      const data = response.data || {}
+      if (data.devOtp) {
+        toast.success(`New verification code: ${data.devOtp}`, { duration: 10000 })
+        const digits = data.devOtp.toString().split('').slice(0, 6)
+        const newVals = ['', '', '', '', '', '']
+        digits.forEach((d, i) => { newVals[i] = d })
+        setOtpValues(newVals)
+      } else {
+        toast.success('New 5-minute code sent!')
+      }
       startCooldown()
       startExpiryTimer()
       otpRefs.current[0]?.focus()
@@ -281,7 +299,7 @@ function Register() {
       
       if (result.success) {
         toast.success('Account created successfully!')
-        navigate('/dashboard')
+        navigate('/app/dashboard', { replace: true })
       } else {
         console.error('Registration failed:', result.error)
         toast.error(typeof result.error === 'string' ? result.error : 'Registration failed')

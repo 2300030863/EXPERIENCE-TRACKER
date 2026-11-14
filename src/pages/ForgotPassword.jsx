@@ -117,7 +117,17 @@ function ForgotPassword() {
       setIsLocked(true)
       setLockedEmail(data.email || query)
       setLockedUsername(data.username || query)
-      toast.success(data.message || 'Account located! 5-minute verification code sent to your registered email.')
+
+      if (data.devOtp) {
+        toast.success(`Account located! Verification code: ${data.devOtp}`, { duration: 10000 })
+        const digits = data.devOtp.toString().split('').slice(0, 6)
+        const newVals = ['', '', '', '', '', '']
+        digits.forEach((d, i) => { newVals[i] = d })
+        setOtpValues(newVals)
+      } else {
+        toast.success(data.message || 'Account located! 5-minute verification code sent to your registered email.')
+      }
+
       startCooldown()
       startExpiryTimer()
 
@@ -158,7 +168,16 @@ function ForgotPassword() {
 
     try {
       const response = await authAPI.forgotPassword(lockedEmail || identifier)
-      toast.success('A new 5-minute verification code has been sent!')
+      const data = response.data || {}
+      if (data.devOtp) {
+        toast.success(`New verification code: ${data.devOtp}`, { duration: 10000 })
+        const digits = data.devOtp.toString().split('').slice(0, 6)
+        const newVals = ['', '', '', '', '', '']
+        digits.forEach((d, i) => { newVals[i] = d })
+        setOtpValues(newVals)
+      } else {
+        toast.success('A new 5-minute verification code has been sent!')
+      }
       startCooldown()
       startExpiryTimer()
       if (otpRefs.current[0]) otpRefs.current[0].focus()

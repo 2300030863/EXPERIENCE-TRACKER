@@ -12,7 +12,7 @@ function AdminDashboard() {
   
   // Only ROLE_ADMIN and ROLE_OWNER can access
   if (user?.role !== 'ROLE_ADMIN' && user?.role !== 'ROLE_OWNER') {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/app/dashboard" replace />
   }
   
   const [stats, setStats] = useState({

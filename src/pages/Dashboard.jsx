@@ -71,18 +71,36 @@ function Dashboard() {
   }
 
   const formatCategoryData = (categorySpending) => {
-    return categorySpending?.map((item, index) => ({
-      name: item[0],
-      value: parseFloat(item[1]),
-      color: COLORS[index % COLORS.length]
-    })) || []
+    if (!Array.isArray(categorySpending)) return []
+    return categorySpending
+      .filter(item => item && (Array.isArray(item) ? item[0] : item.name))
+      .map((item, index) => {
+        const name = Array.isArray(item) ? (item[0] || 'Other') : (item.name || 'Other')
+        const rawVal = Array.isArray(item) ? item[1] : (item.value || item.amount)
+        const parsed = parseFloat(rawVal)
+        const value = isNaN(parsed) ? 0 : Math.max(0, parsed)
+        return {
+          name,
+          value,
+          color: COLORS[index % COLORS.length]
+        }
+      })
   }
 
   const formatTrendData = (monthlyTrend) => {
-    return monthlyTrend?.map(item => ({
-      month: item[0],
-      amount: parseFloat(item[1])
-    })) || []
+    if (!Array.isArray(monthlyTrend)) return []
+    return monthlyTrend
+      .filter(item => item)
+      .map(item => {
+        const month = Array.isArray(item) ? (item[0] || '') : (item.month || '')
+        const rawVal = Array.isArray(item) ? item[1] : (item.amount || item.value)
+        const parsed = parseFloat(rawVal)
+        const amount = isNaN(parsed) ? 0 : parsed
+        return {
+          month,
+          amount
+        }
+      })
   }
 
   const handleCountrySelected = () => {

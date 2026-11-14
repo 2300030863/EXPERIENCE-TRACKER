@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Lazy-loaded route components for instant mobile and desktop responsiveness
 const Welcome = lazy(() => import('./pages/Welcome'))
@@ -50,17 +51,17 @@ function ProtectedRoute({ children, adminOnly = false, ownerOnly = false }) {
   }
   
   if (!user) {
-    return <Navigate to="/login" />
+    return <Navigate to="/login" replace />
   }
   
   // Owner-only route protection
   if (ownerOnly && user.role !== 'ROLE_OWNER') {
-    return <Navigate to="/app/dashboard" />
+    return <Navigate to="/app/dashboard" replace />
   }
   
   // Admin-only route protection (Owner can also access)
   if (adminOnly && user.role !== 'ROLE_ADMIN' && user.role !== 'ROLE_OWNER') {
-    return <Navigate to="/app/dashboard" />
+    return <Navigate to="/app/dashboard" replace />
   }
   
   return children
@@ -73,7 +74,7 @@ function PublicRoute({ children }) {
     return <PageLoader />
   }
   
-  return user ? <Navigate to="/app/dashboard" /> : children
+  return user ? <Navigate to="/app/dashboard" replace /> : children
 }
 
 function App() {
@@ -89,61 +90,81 @@ function App() {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router basename="/" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <div className="min-h-screen bg-gray-50 text-gray-900 antialiased selection:bg-purple-500 selection:text-white">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Welcome />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/contact" element={<ContactUs />} />
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/register" element={
-                  <PublicRoute>
-                    <Register />
-                  </PublicRoute>
-                } />
-                <Route path="/forgot-password" element={
-                  <PublicRoute>
-                    <ForgotPassword />
-                  </PublicRoute>
-                } />
-                <Route path="/reset-password" element={
-                  <PublicRoute>
-                    <ResetPassword />
-                  </PublicRoute>
-                } />
-                <Route path="/app" element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="/app/dashboard" />} />
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="transactions" element={<Transactions />} />
-                  <Route path="recurring-transactions" element={<RecurringTransactions />} />
-                  <Route path="categories" element={<Categories />} />
-                  <Route path="accounts" element={<Accounts />} />
-                  <Route path="budgets" element={<Budgets />} />
-                  <Route path="reports" element={<Reports />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="admin" element={<AdminDashboard />} />
-                  <Route path="owner" element={<OwnerDashboard />} />
-                  <Route path="menu" element={<AllNavigation />} />
-                </Route>
-              </Routes>
-            </Suspense>
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                className: 'rounded-xl shadow-lg border border-gray-100 font-medium text-sm',
-                duration: 3500,
-              }}
-            />
-          </div>
+          <ErrorBoundary>
+            <div className="min-h-screen bg-gray-50 text-gray-900 antialiased selection:bg-purple-500 selection:text-white">
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<Welcome />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/login" element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  } />
+                  <Route path="/register" element={
+                    <PublicRoute>
+                      <Register />
+                    </PublicRoute>
+                  } />
+                  <Route path="/forgot-password" element={
+                    <PublicRoute>
+                      <ForgotPassword />
+                    </PublicRoute>
+                  } />
+                  <Route path="/reset-password" element={
+                    <PublicRoute>
+                      <ResetPassword />
+                    </PublicRoute>
+                  } />
+
+                  {/* Legacy URL redirects to /app/* paths to prevent white screen on browser back/bookmarks */}
+                  <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                  <Route path="/transactions" element={<Navigate to="/app/transactions" replace />} />
+                  <Route path="/recurring-transactions" element={<Navigate to="/app/recurring-transactions" replace />} />
+                  <Route path="/categories" element={<Navigate to="/app/categories" replace />} />
+                  <Route path="/accounts" element={<Navigate to="/app/accounts" replace />} />
+                  <Route path="/budgets" element={<Navigate to="/app/budgets" replace />} />
+                  <Route path="/reports" element={<Navigate to="/app/reports" replace />} />
+                  <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+                  <Route path="/admin" element={<Navigate to="/app/admin" replace />} />
+                  <Route path="/owner" element={<Navigate to="/app/owner" replace />} />
+                  <Route path="/menu" element={<Navigate to="/app/menu" replace />} />
+
+                  <Route path="/app" element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Navigate to="/app/dashboard" replace />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="transactions" element={<Transactions />} />
+                    <Route path="recurring-transactions" element={<RecurringTransactions />} />
+                    <Route path="categories" element={<Categories />} />
+                    <Route path="accounts" element={<Accounts />} />
+                    <Route path="budgets" element={<Budgets />} />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="owner" element={<OwnerDashboard />} />
+                    <Route path="menu" element={<AllNavigation />} />
+                    <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+                  </Route>
+
+                  {/* Catch-all global fallback to prevent blank white page */}
+                  <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+                </Routes>
+              </Suspense>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  className: 'rounded-xl shadow-lg border border-gray-100 font-medium text-sm',
+                  duration: 3500,
+                }}
+              />
+            </div>
+          </ErrorBoundary>
         </Router>
       </AuthProvider>
     </GoogleOAuthProvider>

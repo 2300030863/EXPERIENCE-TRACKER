@@ -1,7 +1,11 @@
 import axios from 'axios'
 
-// Base URL for backend API - use environment variable or default to backend port 8086
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8086/expense-tracker-api';
+// Base URL for backend API - use environment variable or production Render backend URL fallback
+const API_BASE_URL = 
+  import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? 'https://renderexpensivetracker.onrender.com' 
+    : 'http://localhost:8086/expense-tracker-api');
 
 // Debug logging for API URL
 console.log('API Base URL:', API_BASE_URL)
@@ -38,11 +42,20 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors gracefully without redirect loops
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || ''
+    const isAuthEndpoint = ['/auth/login', '/auth/google', '/auth/verify', '/auth/forgot-password', '/auth/reset-password', '/auth/send-otp'].some(u => requestUrl.includes(u))
+    const isAuthPage = typeof window !== 'undefined' && (
+      window.location.pathname === '/login' ||
+      window.location.pathname === '/register' ||
+      window.location.pathname === '/forgot-password' ||
+      window.location.pathname === '/reset-password'
+    )
+
+    if (error.response?.status === 401 && !isAuthEndpoint && !isAuthPage) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }

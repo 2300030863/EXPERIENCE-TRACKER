@@ -23,7 +23,7 @@ const OwnerDashboard = () => {
   
   // Only ROLE_OWNER can access
   if (user?.role !== 'ROLE_OWNER') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
   
   const [users, setUsers] = useState([]);

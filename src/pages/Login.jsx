@@ -110,7 +110,7 @@ function Login() {
       const result = await login(formData)
       if (result.success) {
         toast.success('Login successful!')
-        navigate('/dashboard')
+        navigate('/app/dashboard', { replace: true })
       } else {
         console.error('Login failed:', result.error)
         const errorMsg = typeof result.error === 'string' ? result.error : 'Login failed'
@@ -168,7 +168,7 @@ function Login() {
 
         if (result.success) {
           toast.success('Login with Google successful!')
-          navigate('/dashboard')
+          navigate('/app/dashboard', { replace: true })
         } else {
           const errorMsg = typeof result.error === 'string' ? result.error : 'Google login failed'
           setErrorMessage(errorMsg)
