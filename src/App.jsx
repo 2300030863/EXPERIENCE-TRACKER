@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Toaster } from 'react-hot-toast'
@@ -77,6 +77,18 @@ function PublicRoute({ children }) {
   return user ? <Navigate to="/app/dashboard" replace /> : children
 }
 
+function SpaPathRestorer() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+      const target = window.location.hash.substring(1)
+      window.history.replaceState(null, '', target)
+      navigate(target, { replace: true })
+    }
+  }, [navigate])
+  return null
+}
+
 function App() {
   const { i18n } = useTranslation()
 
@@ -90,6 +102,7 @@ function App() {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router basename="/" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <SpaPathRestorer />
           <ErrorBoundary>
             <div className="min-h-screen bg-gray-50 text-gray-900 antialiased selection:bg-purple-500 selection:text-white">
               <Suspense fallback={<PageLoader />}>
