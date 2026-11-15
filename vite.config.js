@@ -11,7 +11,7 @@ export default defineConfig(({ command }) => ({
     open: true,
     host: true, // Allow external connections
     headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Opener-Policy': 'unsafe-none',
     },
     proxy: {
       '/expense-tracker-api': {
@@ -22,7 +22,7 @@ export default defineConfig(({ command }) => ({
   },
   preview: {
     headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Opener-Policy': 'unsafe-none',
     },
   },
   build: {
