@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Layers,
   Lock,
-  RefreshCw
+  RefreshCw,
+  Clipboard
 } from 'lucide-react';
 
 const OwnerDashboard = () => {
@@ -142,6 +143,17 @@ const OwnerDashboard = () => {
         error: err.response?.data?.error || 'Failed to send OTP verification code',
       }));
     }
+  };
+
+  const handlePasteDeleteOtp = async () => {
+    try {
+      if (!navigator.clipboard?.readText) return;
+      const text = await navigator.clipboard.readText();
+      const cleanDigits = text.replace(/\D/g, '').slice(0, 6);
+      if (cleanDigits.length > 0) {
+        setDeleteModal(prev => ({ ...prev, otp: cleanDigits, error: '' }));
+      }
+    } catch (_) {}
   };
 
   const handleConfirmDelete = async () => {
@@ -1237,12 +1249,32 @@ const OwnerDashboard = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
                     maxLength={6}
                     value={deleteModal.otp}
                     onChange={(e) => setDeleteModal(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
-                    placeholder="6-digit OTP"
+                    onPaste={(e) => {
+                      const paste = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+                      const cleanDigits = paste.replace(/\D/g, '').slice(0, 6);
+                      if (cleanDigits.length > 0) {
+                        e.preventDefault();
+                        setDeleteModal(prev => ({ ...prev, otp: cleanDigits, error: '' }));
+                      }
+                    }}
+                    placeholder="Enter 6-digit OTP"
                     className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono tracking-widest text-center focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={handlePasteDeleteOtp}
+                    className="px-3 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition-all flex items-center gap-1 cursor-pointer"
+                    title="Paste 6-digit OTP from clipboard"
+                  >
+                    <Clipboard size={13} />
+                    <span>Paste</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleSendDeleteOtp}

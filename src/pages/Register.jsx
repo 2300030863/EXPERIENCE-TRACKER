@@ -18,7 +18,8 @@ import {
   Sparkles,
   RefreshCw,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Clipboard
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { COUNTRIES } from '../utils/currency'
@@ -167,29 +168,95 @@ function Register() {
     setStep(3)
   }
 
+  // Web OTP API detection (for automatic OTP filling from Gmail / mobile)
+  useEffect(() => {
+    if (step !== 1 || otpVerified || !('OTPCredential' in window)) return
+
+    const ac = new AbortController()
+    navigator.credentials?.get({
+      otp: { transport: ['email', 'sms'] },
+      signal: ac.signal
+    }).then(content => {
+      if (content?.code) {
+        const cleanCode = content.code.replace(/\D/g, '').slice(0, 6)
+        if (cleanCode.length === 6) {
+          setOtpValues(cleanCode.split(''))
+          setOtpError('')
+          toast.success('Code detected! Verifying...')
+          verifyOtp(cleanCode)
+        }
+      }
+    }).catch(() => {})
+
+    return () => {
+      try { ac.abort() } catch (_) {}
+    }
+  }, [step, otpVerified])
+
+  // Window paste listener: if user copies from Gmail and pastes anywhere on the page
+  useEffect(() => {
+    if (step !== 1 || otpVerified) return
+
+    const handleGlobalPaste = (e) => {
+      const activeEl = document.activeElement
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+      const isOurOtpBox = otpRefs.current.includes(activeEl)
+      if (isInput && !isOurOtpBox) return
+
+      const text = (e.clipboardData || window.clipboardData)?.getData('text') || ''
+      const cleanCode = text.replace(/\D/g, '').slice(0, 6)
+      if (cleanCode.length === 6) {
+        e.preventDefault()
+        setOtpValues(cleanCode.split(''))
+        setOtpError('')
+        toast.success(`Pasted code ${cleanCode}! Verifying...`)
+        verifyOtp(cleanCode)
+      }
+    }
+
+    window.addEventListener('paste', handleGlobalPaste)
+    return () => window.removeEventListener('paste', handleGlobalPaste)
+  }, [step, otpVerified, otpExpiryTime])
+
   const handleOtpChange = (index, value) => {
-    if (value && !/^\d$/.test(value)) return
     if (otpExpiryTime <= 0) {
       setOtpError('Verification code has expired. Please click Resend Code.')
       return
     }
 
+    const digits = value.replace(/\D/g, '')
+    if (digits.length > 1) {
+      // Browser autofill or user paste into single box
+      const newValues = [...otpValues]
+      for (let i = 0; i < 6; i++) {
+        newValues[i] = digits[i] || ''
+      }
+      setOtpValues(newValues)
+      setOtpError('')
+      const fullOtp = newValues.join('')
+      if (fullOtp.length === 6) {
+        verifyOtp(fullOtp)
+      } else {
+        const nextIdx = Math.min(digits.length, 5)
+        otpRefs.current[nextIdx]?.focus()
+      }
+      return
+    }
+
     const newValues = [...otpValues]
-    newValues[index] = value
+    newValues[index] = digits
     setOtpValues(newValues)
     setOtpError('')
 
     // Auto-focus next input
-    if (value && index < 5) {
+    if (digits && index < 5) {
       otpRefs.current[index + 1]?.focus()
     }
 
     // Auto-verify when all 6 digits entered
-    if (value && index === 5) {
-      const fullOtp = newValues.join('')
-      if (fullOtp.length === 6) {
-        verifyOtp(fullOtp)
-      }
+    const fullOtp = newValues.join('')
+    if (fullOtp.length === 6) {
+      verifyOtp(fullOtp)
     }
   }
 
@@ -205,18 +272,52 @@ function Register() {
       setOtpError('Verification code has expired. Please click Resend Code.')
       return
     }
-    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (paste.length > 0) {
-      const newValues = [...otpValues]
-      for (let i = 0; i < 6; i++) {
-        newValues[i] = paste[i] || ''
+    const paste = (e.clipboardData || window.clipboardData)?.getData('text') || ''
+    const cleanDigits = paste.replace(/\D/g, '').slice(0, 6)
+    if (cleanDigits.length > 0) {
+      const newValues = ['', '', '', '', '', '']
+      for (let i = 0; i < cleanDigits.length; i++) {
+        newValues[i] = cleanDigits[i]
       }
       setOtpValues(newValues)
-      const lastIndex = Math.min(paste.length, 6) - 1
+      setOtpError('')
+      const lastIndex = Math.min(cleanDigits.length, 6) - 1
       otpRefs.current[lastIndex]?.focus()
-      if (paste.length === 6) {
-        verifyOtp(paste)
+      if (cleanDigits.length === 6) {
+        verifyOtp(cleanDigits)
       }
+    }
+  }
+
+  const handlePasteClipboard = async () => {
+    if (otpExpiryTime <= 0) {
+      setOtpError('Verification code has expired. Please click Resend Code.')
+      return
+    }
+    try {
+      if (!navigator.clipboard?.readText) {
+        toast.error('Clipboard access not supported. Please paste directly into the box.')
+        return
+      }
+      const text = await navigator.clipboard.readText()
+      const cleanDigits = text.replace(/\D/g, '').slice(0, 6)
+      if (cleanDigits.length === 6) {
+        const newValues = cleanDigits.split('')
+        setOtpValues(newValues)
+        setOtpError('')
+        toast.success(`Pasted code ${cleanDigits}! Verifying...`)
+        verifyOtp(cleanDigits)
+      } else if (cleanDigits.length > 0) {
+        const newValues = ['', '', '', '', '', '']
+        for (let i = 0; i < cleanDigits.length; i++) newValues[i] = cleanDigits[i]
+        setOtpValues(newValues)
+        setOtpError('')
+        otpRefs.current[cleanDigits.length]?.focus()
+      } else {
+        toast.error('No 6-digit verification code found in clipboard')
+      }
+    } catch (err) {
+      toast.error('Please tap and paste inside the box')
     }
   }
 
@@ -501,11 +602,12 @@ function Register() {
                       ref={el => (otpRefs.current[idx] = el)}
                       type="text"
                       inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={1}
                       value={val}
                       onChange={(e) => handleOtpChange(idx, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      onPaste={idx === 0 ? handleOtpPaste : undefined}
+                      onPaste={handleOtpPaste}
                       disabled={otpVerifying || otpExpiryTime <= 0}
                       autoComplete="one-time-code"
                       className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold font-mono rounded-xl border-2 transition-all focus:outline-none ${
@@ -517,6 +619,19 @@ function Register() {
                       }`}
                     />
                   ))}
+                </div>
+
+                {/* Quick Paste Code Action */}
+                <div className="flex justify-center my-2">
+                  <button
+                    type="button"
+                    onClick={handlePasteClipboard}
+                    disabled={otpVerifying || otpExpiryTime <= 0}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 rounded-lg border border-indigo-200 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Clipboard size={13} />
+                    <span>Paste Code from Clipboard</span>
+                  </button>
                 </div>
 
                 {otpError && (
