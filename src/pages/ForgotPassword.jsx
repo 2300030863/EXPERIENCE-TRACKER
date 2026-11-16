@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   KeyRound, 
   Lock, 
@@ -22,6 +22,7 @@ import { authAPI } from '../services/api'
 
 function ForgotPassword() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [identifier, setIdentifier] = useState('')
   const [isLocked, setIsLocked] = useState(false)
   const [lockedEmail, setLockedEmail] = useState('')
@@ -52,6 +53,34 @@ function ForgotPassword() {
       setIdentifier(saved)
     }
   }, [])
+
+  // Auto-fill code and email from URL (e.g. from "Copy & Auto-Fill Code" in email)
+  useEffect(() => {
+    const urlCode = searchParams.get('code') || searchParams.get('otp')
+    const urlIdentifier = searchParams.get('identifier') || searchParams.get('email') || searchParams.get('username')
+
+    if (urlCode) {
+      const clean = urlCode.toString().trim()
+      if (/^\d{6}$/.test(clean)) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(clean).catch(() => {})
+        }
+        if (urlIdentifier) {
+          const ident = urlIdentifier.trim()
+          setIdentifier(ident)
+          setLockedEmail(ident)
+          setLockedUsername(ident)
+          setIsLocked(true)
+        } else {
+          setIsLocked(true)
+        }
+        setOtpValues(clean.split(''))
+        setOtpExpiryTime(300)
+        setResendCooldown(60)
+        toast.success(`Verification code ${clean} copied & auto-filled! Enter new password below.`)
+      }
+    }
+  }, [searchParams])
 
   // Cleanup timers on unmount
   useEffect(() => {

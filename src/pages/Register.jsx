@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { authAPI } from '../services/api'
 import { 
@@ -26,6 +26,7 @@ import { COUNTRIES } from '../utils/currency'
 import OccupationSelector from '../components/OccupationSelector'
 
 function Register() {
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState(1) // Step 1: Email Verification, Step 2: Personal Info, Step 3: Occupation
   const [formData, setFormData] = useState({
     username: '',
@@ -64,6 +65,29 @@ function Register() {
       if (expiryRef.current) clearInterval(expiryRef.current)
     }
   }, [])
+
+  // Auto-fill code and email from URL parameters
+  useEffect(() => {
+    const urlCode = searchParams.get('code') || searchParams.get('otp')
+    const urlEmail = searchParams.get('email')
+
+    if (urlCode) {
+      const clean = urlCode.toString().trim()
+      if (/^\d{6}$/.test(clean)) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(clean).catch(() => {})
+        }
+        if (urlEmail) {
+          setFormData(prev => ({ ...prev, email: urlEmail.trim() }))
+        }
+        setOtpSent(true)
+        setOtpValues(clean.split(''))
+        setOtpExpiryTime(300)
+        setResendCooldown(60)
+        toast.success(`Verification code ${clean} copied & auto-filled!`)
+      }
+    }
+  }, [searchParams])
 
   const startCooldown = () => {
     setResendCooldown(60)
