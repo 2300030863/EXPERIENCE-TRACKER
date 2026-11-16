@@ -113,29 +113,29 @@ function Login() {
         navigate('/app/dashboard', { replace: true })
       } else {
         console.error('Login failed:', result.error)
-        const errorMsg = typeof result.error === 'string' ? result.error : 'Login failed'
-        setErrorMessage(errorMsg)
+        const errorCodeDisplay = result.error || (result.status ? `Error Code: ${result.status}` : 'Error Code: 401')
+        setErrorMessage(errorCodeDisplay)
         
-        if (!errorMsg.toLowerCase().includes('block')) {
-          toast.error(errorMsg)
-          setLoading(false)
-        } else {
+        if (result.status === 403 || String(result.errorCode) === '403') {
           setIsBlocked(true)
           setCountdown(10)
           setLoading(false)
           
           sessionStorage.setItem('userBlocked', JSON.stringify({
-            message: errorMsg,
+            message: errorCodeDisplay,
             timestamp: Date.now()
           }))
           
           startBlockedTimer(10)
+        } else {
+          toast.error(errorCodeDisplay)
+          setLoading(false)
         }
       }
     } catch (error) {
-      const errorMsg = 'An unexpected error occurred'
-      setErrorMessage(errorMsg)
-      toast.error(errorMsg)
+      const codeDisplay = error.response?.status ? `Error Code: ${error.response.status}` : 'Error Code: 500'
+      setErrorMessage(codeDisplay)
+      toast.error(codeDisplay)
       setLoading(false)
     }
     
@@ -170,22 +170,22 @@ function Login() {
           toast.success('Login with Google successful!')
           navigate('/app/dashboard', { replace: true })
         } else {
-          const errorMsg = typeof result.error === 'string' ? result.error : 'Google login failed'
-          setErrorMessage(errorMsg)
-          toast.error(errorMsg)
+          const codeDisplay = result.error || (result.status ? `Error Code: ${result.status}` : 'Error Code: 401')
+          setErrorMessage(codeDisplay)
+          toast.error(codeDisplay)
         }
       } catch (error) {
         console.error('Google login error:', error)
-        const msg = error.message || 'Google login failed. Please try again.'
-        setErrorMessage(msg)
-        toast.error(msg)
+        const codeDisplay = error.response?.status ? `Error Code: ${error.response.status}` : 'Error Code: 401'
+        setErrorMessage(codeDisplay)
+        toast.error(codeDisplay)
       } finally {
         setGoogleLoading(false)
       }
     },
     onError: (err) => {
       console.error('Google OAuth error:', err)
-      toast.error('Google login was cancelled or failed')
+      toast.error('Error Code: 401')
     },
   })
 
@@ -205,18 +205,18 @@ function Login() {
             Access Temporarily Blocked
           </h1>
           <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-            Our automated security system has placed a short hold on this account.
+            Our automated security system has placed a hold on this request.
           </p>
 
           <div className="rounded-2xl bg-rose-50/80 border border-rose-200 p-4 sm:p-5 mb-6 text-left">
             <div className="flex items-start gap-3">
               <Lock className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-rose-900">
-                  {errorMessage}
+                <p className="text-base font-bold font-mono text-rose-900 tracking-wide">
+                  {errorMessage.startsWith('Error Code:') ? errorMessage : `Error Code: ${errorMessage}`}
                 </p>
                 <p className="text-xs text-rose-700/80 mt-1">
-                  Please reach out to your administrator if you believe this is in error.
+                  Access denied by security policy.
                 </p>
               </div>
             </div>
@@ -285,10 +285,10 @@ function Login() {
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                Authentication Failed
+                Authentication Error
               </h4>
-              <p className="text-xs font-medium text-rose-700 mt-0.5">
-                {errorMessage}
+              <p className="text-xs font-bold font-mono text-rose-700 mt-0.5 tracking-wide">
+                {errorMessage.startsWith('Error Code:') ? errorMessage : `Error Code: ${errorMessage}`}
               </p>
             </div>
           </div>

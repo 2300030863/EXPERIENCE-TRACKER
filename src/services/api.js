@@ -46,6 +46,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error.response?.status
+    const rawCode = error.response?.data?.code || (status ? String(status) : (error.code || 'ERR_NETWORK'))
+    error.errorCode = rawCode
+    error.displayError = `Error Code: ${rawCode}`
+
     const requestUrl = error.config?.url || ''
     const isAuthEndpoint = ['/auth/login', '/auth/google', '/auth/verify', '/auth/forgot-password', '/auth/reset-password', '/auth/send-otp'].some(u => requestUrl.includes(u))
     const isAuthPage = typeof window !== 'undefined' && (

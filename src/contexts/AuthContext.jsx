@@ -52,28 +52,15 @@ export function AuthProvider({ children }) {
       return { success: true }
     } catch (error) {
       console.error('Login error:', error)
-      let errorMessage = 'Login failed'
-      
-      if (error.response?.status === 403) {
-        // Blocked user - use server message
-        errorMessage = error.response?.data || 'Your account has been blocked. Please contact support.'
-      } else if (error.response?.status === 401) {
-        errorMessage = error.response?.data || 'Invalid username/email or password'
-      } else if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message
-        } else if (error.response.data.error) {
-          errorMessage = error.response.data.error
-        }
-      } else if (error.message) {
-        errorMessage = error.message
-      }
+      const status = error.response?.status
+      const rawCode = error.response?.data?.code || (status ? String(status) : (error.code || '401'))
+      const errorCodeDisplay = `Error Code: ${rawCode}`
       
       return { 
         success: false, 
-        error: errorMessage
+        error: errorCodeDisplay,
+        errorCode: rawCode,
+        status: status || 401
       }
     }
   }
@@ -93,23 +80,15 @@ export function AuthProvider({ children }) {
       return { success: true }
     } catch (error) {
       console.error('Registration error:', error)
-      let errorMessage = 'Registration failed'
-      
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message
-        } else if (error.response.data.error) {
-          errorMessage = error.response.data.error
-        }
-      } else if (error.message) {
-        errorMessage = error.message
-      }
+      const status = error.response?.status
+      const rawCode = error.response?.data?.code || (status ? String(status) : (error.code || '400'))
+      const errorCodeDisplay = `Error Code: ${rawCode}`
       
       return { 
         success: false, 
-        error: errorMessage
+        error: errorCodeDisplay,
+        errorCode: rawCode,
+        status: status || 400
       }
     }
   }
