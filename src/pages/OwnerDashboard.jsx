@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { adminAPI } from '../services/api';
 import { 
   Users, 
   Shield, 
@@ -15,7 +15,14 @@ import {
   Trash2,
   Mail,
   Send,
-  Search
+  Search,
+  UserX,
+  AlertTriangle,
+  KeyRound,
+  ShieldAlert,
+  Layers,
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 
 const OwnerDashboard = () => {
@@ -30,8 +37,11 @@ const OwnerDashboard = () => {
   const [systemStats, setSystemStats] = useState({
     totalAdmins: 0,
     totalUsers: 0,
+    totalGroupUsers: 0,
+    totalBlocked: 0,
     totalTransactions: 0
   });
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'ADMINS' | 'GROUP_USERS' | 'MEMBERS' | 'BLOCKED'
   const [showAddAdmin, setShowAddAdmin] = useState(false);
   const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -40,6 +50,20 @@ const OwnerDashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Delete Account Confirmation & OTP Modal State
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    user: null,
+    typedUsername: '',
+    otp: '',
+    otpSent: false,
+    sendingOtp: false,
+    countdown: 0,
+    deleting: false,
+    error: ''
+  });
+  const deleteTimerRef = useRef(null);
   
   const [newAdmin, setNewAdmin] = useState({
     username: '',
@@ -52,7 +76,112 @@ const OwnerDashboard = () => {
   useEffect(() => {
     fetchUsersAndAdmins();
     fetchSystemStats();
+
+    return () => {
+      if (deleteTimerRef.current) clearInterval(deleteTimerRef.current);
+    };
   }, []);
+
+  const openDeleteModal = (targetUser) => {
+    if (deleteTimerRef.current) clearInterval(deleteTimerRef.current);
+    setDeleteModal({
+      open: true,
+      user: targetUser,
+      typedUsername: '',
+      otp: '',
+      otpSent: false,
+      sendingOtp: false,
+      countdown: 0,
+      deleting: false,
+      error: '',
+    });
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteTimerRef.current) clearInterval(deleteTimerRef.current);
+    setDeleteModal({
+      open: false,
+      user: null,
+      typedUsername: '',
+      otp: '',
+      otpSent: false,
+      sendingOtp: false,
+      countdown: 0,
+      deleting: false,
+      error: '',
+    });
+  };
+
+  const handleSendDeleteOtp = async () => {
+    if (!deleteModal.user) return;
+    try {
+      setDeleteModal(prev => ({ ...prev, sendingOtp: true, error: '' }));
+      await adminAPI.requestDeleteOtp(deleteModal.user.id);
+      
+      setDeleteModal(prev => ({
+        ...prev,
+        sendingOtp: false,
+        otpSent: true,
+        countdown: 60,
+      }));
+
+      if (deleteTimerRef.current) clearInterval(deleteTimerRef.current);
+      deleteTimerRef.current = setInterval(() => {
+        setDeleteModal(prev => {
+          if (prev.countdown <= 1) {
+            clearInterval(deleteTimerRef.current);
+            return { ...prev, countdown: 0 };
+          }
+          return { ...prev, countdown: prev.countdown - 1 };
+        });
+      }, 1000);
+    } catch (err) {
+      setDeleteModal(prev => ({
+        ...prev,
+        sendingOtp: false,
+        error: err.response?.data?.error || 'Failed to send OTP verification code',
+      }));
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.user) return;
+    if (deleteModal.typedUsername !== deleteModal.user.username) {
+      setDeleteModal(prev => ({
+        ...prev,
+        error: `Username mismatch. Please type "${deleteModal.user.username}" to confirm deletion.`,
+      }));
+      return;
+    }
+    if (!deleteModal.otp || deleteModal.otp.trim().length !== 6) {
+      setDeleteModal(prev => ({
+        ...prev,
+        error: 'Please enter the 6-digit OTP code sent to your email.',
+      }));
+      return;
+    }
+
+    try {
+      setDeleteModal(prev => ({ ...prev, deleting: true, error: '' }));
+      await adminAPI.deleteUserWithOtp(deleteModal.user.id, {
+        confirmationUsername: deleteModal.typedUsername,
+        otp: deleteModal.otp.trim(),
+      });
+
+      const deletedUsername = deleteModal.user.username;
+      closeDeleteModal();
+      setSuccess(`Account "${deletedUsername}" has been permanently deleted.`);
+      fetchUsersAndAdmins();
+      fetchSystemStats();
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setDeleteModal(prev => ({
+        ...prev,
+        deleting: false,
+        error: err.response?.data?.error || 'Failed to delete user account',
+      }));
+    }
+  };
 
   const changeRole = async (userId, currentRole, username) => {
     const targetRole = currentRole === 'ROLE_ADMIN' ? 'ROLE_USER' : 'ROLE_ADMIN';
@@ -73,6 +202,27 @@ const OwnerDashboard = () => {
     }
   };
 
+  const handleToggleBlock = async (userId, currentBlocked, username) => {
+    const action = currentBlocked ? 'unblock' : 'block';
+    if (!window.confirm(`Are you sure you want to ${action} "${username}"?`)) {
+      return;
+    }
+    try {
+      if (currentBlocked) {
+        await api.post(`/admin/users/${userId}/unblock`);
+        setSuccess(`Successfully unblocked ${username}`);
+      } else {
+        await api.post(`/admin/users/${userId}/block`);
+        setSuccess(`Successfully blocked ${username}`);
+      }
+      fetchUsersAndAdmins();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || `Failed to ${action} user`);
+      setTimeout(() => setError(''), 5000);
+    }
+  };
+
   const fetchUsersAndAdmins = async () => {
     try {
       setLoading(true);
@@ -81,12 +231,16 @@ const OwnerDashboard = () => {
       
       // Calculate stats from the data
       const adminsCount = response.data.filter(u => u.role === 'ROLE_ADMIN').length;
-      const usersCount = response.data.filter(u => u.role === 'ROLE_USER').length;
-      
+      const groupUsersCount = response.data.filter(u => u.userGroupId || u.isGroupMember).length;
+      const standardUsersCount = response.data.filter(u => u.role === 'ROLE_USER' && !u.userGroupId && !u.isGroupMember).length;
+      const blockedCount = response.data.filter(u => u.blocked).length;
+
       setSystemStats(prev => ({
         ...prev,
         totalAdmins: adminsCount,
-        totalUsers: usersCount
+        totalUsers: standardUsersCount,
+        totalGroupUsers: groupUsersCount,
+        totalBlocked: blockedCount,
       }));
     } catch (err) {
       setError('Failed to fetch users and admins');
@@ -205,8 +359,14 @@ const OwnerDashboard = () => {
     }
   };
 
-  // Filter users based on search term
+  // Filter users based on active tab and search term
   const filteredUsers = users.filter(user => {
+    // Tab filter
+    if (activeTab === 'ADMINS' && user.role !== 'ROLE_ADMIN') return false;
+    if (activeTab === 'GROUP_USERS' && !user.userGroupId && !user.isGroupMember) return false;
+    if (activeTab === 'MEMBERS' && (user.role !== 'ROLE_USER' || user.userGroupId || user.isGroupMember)) return false;
+    if (activeTab === 'BLOCKED' && !user.blocked) return false;
+
     if (!searchTerm) return true;
     
     const search = searchTerm.toLowerCase();
@@ -216,7 +376,8 @@ const OwnerDashboard = () => {
     const lastName = user.lastName?.toLowerCase() || '';
     const fullName = `${firstName} ${lastName}`.toLowerCase();
     const role = user.role?.toLowerCase().replace('role_', '') || '';
-    const adminName = user.adminName?.toLowerCase() || '';
+    const adminUsername = (user.adminUsername || user.adminName || '')?.toLowerCase();
+    const groupName = (user.userGroupName || '')?.toLowerCase();
     
     return username.includes(search) || 
            email.includes(search) || 
@@ -224,7 +385,8 @@ const OwnerDashboard = () => {
            lastName.includes(search) || 
            fullName.includes(search) ||
            role.includes(search) ||
-           adminName.includes(search);
+           adminUsername.includes(search) ||
+           groupName.includes(search);
   });
 
   return (
@@ -271,37 +433,69 @@ const OwnerDashboard = () => {
         )}
 
         {/* System Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Admins</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{systemStats.totalAdmins}</h3>
-              <span className="text-[11px] font-medium text-amber-600 mt-1 inline-block">Elevated Permissions</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Admins</span>
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Shield size={16} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Shield size={24} />
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{systemStats.totalAdmins}</h3>
+              <span className="text-[10px] font-medium text-amber-600 mt-0.5 block">Elevated Access</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Platform Users</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{systemStats.totalUsers}</h3>
-              <span className="text-[11px] font-medium text-blue-600 mt-1 inline-block">Standard Accounts</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Group Users</span>
+              <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
+                <Layers size={16} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <Users size={24} />
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{systemStats.totalGroupUsers}</h3>
+              <span className="text-[10px] font-medium text-cyan-600 mt-0.5 block">Admin Managed</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Transactions</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{systemStats.totalTransactions}</h3>
-              <span className="text-[11px] font-medium text-emerald-600 mt-1 inline-block">Ledger Records</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Standard</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Users size={16} />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <Activity size={24} />
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{systemStats.totalUsers}</h3>
+              <span className="text-[10px] font-medium text-blue-600 mt-0.5 block">Direct Accounts</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Blocked</span>
+              <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <UserX size={16} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{systemStats.totalBlocked}</h3>
+              <span className="text-[10px] font-medium text-rose-600 mt-0.5 block">Restricted</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Transactions</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Activity size={16} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{systemStats.totalTransactions}</h3>
+              <span className="text-[10px] font-medium text-emerald-600 mt-0.5 block">Ledger Records</span>
             </div>
           </div>
         </div>
@@ -540,13 +734,43 @@ const OwnerDashboard = () => {
             </div>
           )}
 
+          {/* Quick Segment Filter Tabs */}
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+            {[
+              { id: 'ALL', label: 'All Accounts', count: users.length },
+              { id: 'ADMINS', label: 'Admins', count: systemStats.totalAdmins },
+              { id: 'GROUP_USERS', label: 'Group Members', count: systemStats.totalGroupUsers },
+              { id: 'MEMBERS', label: 'Standard Members', count: systemStats.totalUsers },
+              { id: 'BLOCKED', label: 'Blocked Accounts', count: systemStats.totalBlocked },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                  activeTab === tab.id
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  activeTab === tab.id
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
           {/* Search Bar */}
           <div className="mb-5">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search users by name, username, email, or role..."
+                placeholder="Search users by name, username, email, role, admin supervisor, or group..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-9 py-2.5 text-sm bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
@@ -577,7 +801,7 @@ const OwnerDashboard = () => {
             <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
               <p className="text-sm font-semibold text-slate-600">No matching accounts found</p>
-              <p className="text-xs text-slate-400 mt-0.5">Try refining your search keyword</p>
+              <p className="text-xs text-slate-400 mt-0.5">Try refining your filter or search keywords</p>
             </div>
           ) : (
             <div>
@@ -596,16 +820,17 @@ const OwnerDashboard = () => {
                       </th>
                       <th className="py-3 px-4">User</th>
                       <th className="py-3 px-4">Email</th>
-                      <th className="py-3 px-4">Role</th>
-                      <th className="py-3 px-4">Admin Supervisor</th>
+                      <th className="py-3 px-4">Role & Type</th>
+                      <th className="py-3 px-4">Admin Supervisor / Group</th>
                       <th className="py-3 px-4">Registered</th>
-                      <th className="py-3 px-4 text-right">Role Governance</th>
+                      <th className="py-3 px-4 text-right">Actions & Governance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {filteredUsers.map((u) => {
                       const isAdmin = u.role === 'ROLE_ADMIN';
                       const isOwner = u.role === 'ROLE_OWNER';
+                      const isGroupMember = Boolean(u.userGroupId || u.isGroupMember);
                       return (
                         <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3.5 px-4">
@@ -623,9 +848,11 @@ const OwnerDashboard = () => {
                                   ? 'bg-amber-100 text-amber-700'
                                   : isAdmin
                                   ? 'bg-purple-100 text-purple-700'
+                                  : isGroupMember
+                                  ? 'bg-cyan-100 text-cyan-700'
                                   : 'bg-indigo-100 text-indigo-700'
                               }`}>
-                                {isOwner ? '👑' : isAdmin ? <Shield size={16} /> : <Users size={16} />}
+                                {isOwner ? '👑' : isAdmin ? <Shield size={16} /> : isGroupMember ? <Layers size={16} /> : <Users size={16} />}
                               </div>
                               <div>
                                 <div className="font-semibold text-slate-900 leading-tight">{u.username}</div>
@@ -639,18 +866,47 @@ const OwnerDashboard = () => {
                             {u.email}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                              isOwner
-                                ? 'bg-amber-100 text-amber-800'
-                                : isAdmin
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              {isOwner ? 'Owner' : isAdmin ? 'Admin' : 'Member'}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                isOwner
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : isAdmin
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : isGroupMember
+                                  ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {isOwner ? 'Owner' : isAdmin ? 'Admin' : isGroupMember ? 'Group Member' : 'Member'}
+                              </span>
+                              {u.blocked && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                  Blocked
+                                </span>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-3.5 px-4 text-xs text-slate-500">
-                            {u.adminUsername || '-'}
+                          <td className="py-3.5 px-4 text-xs">
+                            {isGroupMember ? (
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1 font-semibold text-slate-800">
+                                  <Shield size={12} className="text-purple-600 flex-shrink-0" />
+                                  <span>Admin: {u.adminUsername || 'Admin'}</span>
+                                </div>
+                                <div className="inline-flex items-center gap-1 text-[11px] text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md font-medium border border-cyan-200/60">
+                                  <Layers size={10} />
+                                  <span>Group: {u.userGroupName || 'Group Unit'}</span>
+                                </div>
+                              </div>
+                            ) : u.adminUsername ? (
+                              <div className="flex items-center gap-1 font-semibold text-slate-800">
+                                <Shield size={12} className="text-purple-600 flex-shrink-0" />
+                                <span>Admin: {u.adminUsername}</span>
+                              </div>
+                            ) : isOwner || isAdmin ? (
+                              <span className="text-slate-400">-</span>
+                            ) : (
+                              <span className="text-slate-400 italic">Direct / Independent</span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4 text-xs text-slate-500">
                             {new Date(u.createdAt).toLocaleDateString(undefined, {
@@ -663,27 +919,61 @@ const OwnerDashboard = () => {
                             {isOwner ? (
                               <span className="text-xs font-semibold text-amber-600">Owner Account</span>
                             ) : (
-                              <button
-                                onClick={() => changeRole(u.id, u.role, u.username)}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-sm ${
-                                  isAdmin
-                                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                                }`}
-                                title={isAdmin ? 'Demote to Member' : 'Promote to Admin'}
-                              >
-                                {isAdmin ? (
-                                  <>
-                                    <Users size={13} />
-                                    <span>Demote</span>
-                                  </>
+                              <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                                {/* Block / Unblock Button */}
+                                {u.blocked ? (
+                                  <button
+                                    onClick={() => handleToggleBlock(u.id, true, u.username)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all border border-emerald-200 shadow-2xs"
+                                    title="Unblock User"
+                                  >
+                                    <CheckCircle size={13} />
+                                    <span>Unblock</span>
+                                  </button>
                                 ) : (
-                                  <>
-                                    <Shield size={13} />
-                                    <span>Promote Admin</span>
-                                  </>
+                                  <button
+                                    onClick={() => handleToggleBlock(u.id, false, u.username)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all border border-amber-200 shadow-2xs"
+                                    title="Block User"
+                                  >
+                                    <UserX size={13} />
+                                    <span>Block</span>
+                                  </button>
                                 )}
-                              </button>
+
+                                {/* Promote / Demote Button */}
+                                <button
+                                  onClick={() => changeRole(u.id, u.role, u.username)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-2xs ${
+                                    isAdmin
+                                      ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                      : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/50'
+                                  }`}
+                                  title={isAdmin ? 'Demote to Member' : 'Promote to Admin'}
+                                >
+                                  {isAdmin ? (
+                                    <>
+                                      <Users size={13} />
+                                      <span>Demote</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Shield size={13} />
+                                      <span>Promote Admin</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Delete Account Button */}
+                                <button
+                                  onClick={() => openDeleteModal(u)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all border border-rose-200 shadow-2xs"
+                                  title="Permanently Delete Account"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -711,6 +1001,7 @@ const OwnerDashboard = () => {
                 {filteredUsers.map((u) => {
                   const isAdmin = u.role === 'ROLE_ADMIN';
                   const isOwner = u.role === 'ROLE_OWNER';
+                  const isGroupMember = Boolean(u.userGroupId || u.isGroupMember);
                   return (
                     <div key={u.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -726,9 +1017,11 @@ const OwnerDashboard = () => {
                               ? 'bg-amber-100 text-amber-700'
                               : isAdmin
                               ? 'bg-purple-100 text-purple-700'
+                              : isGroupMember
+                              ? 'bg-cyan-100 text-cyan-700'
                               : 'bg-indigo-100 text-indigo-700'
                           }`}>
-                            {isOwner ? '👑' : isAdmin ? <Shield size={16} /> : <Users size={16} />}
+                            {isOwner ? '👑' : isAdmin ? <Shield size={16} /> : isGroupMember ? <Layers size={16} /> : <Users size={16} />}
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 leading-tight">{u.username}</div>
@@ -738,18 +1031,27 @@ const OwnerDashboard = () => {
                           </div>
                         </div>
 
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isOwner
-                            ? 'bg-amber-100 text-amber-800'
-                            : isAdmin
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {isOwner ? 'Owner' : isAdmin ? 'Admin' : 'Member'}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            isOwner
+                              ? 'bg-amber-100 text-amber-800'
+                              : isAdmin
+                              ? 'bg-purple-100 text-purple-800'
+                              : isGroupMember
+                              ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {isOwner ? 'Owner' : isAdmin ? 'Admin' : isGroupMember ? 'Group Member' : 'Member'}
+                          </span>
+                          {u.blocked && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                              Blocked
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg space-y-1">
+                      <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl space-y-1.5">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Email:</span>
                           <span className="font-medium text-slate-800 break-all">{u.email}</span>
@@ -758,38 +1060,86 @@ const OwnerDashboard = () => {
                           <span className="text-slate-400">Registered:</span>
                           <span>{new Date(u.createdAt).toLocaleDateString()}</span>
                         </div>
-                        {u.adminUsername && (
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Supervisor:</span>
-                            <span>{u.adminUsername}</span>
+                        {isGroupMember ? (
+                          <div className="pt-1 border-t border-slate-200/60 space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400">Admin Supervisor:</span>
+                              <span className="font-bold text-slate-800 flex items-center gap-1">
+                                <Shield size={11} className="text-purple-600" />
+                                {u.adminUsername || 'Admin'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400">Group Name:</span>
+                              <span className="font-semibold text-cyan-700 flex items-center gap-1 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200/50">
+                                <Layers size={10} />
+                                {u.userGroupName || 'Group Unit'}
+                              </span>
+                            </div>
                           </div>
-                        )}
+                        ) : u.adminUsername ? (
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400">Supervisor:</span>
+                            <span className="font-bold text-slate-800 flex items-center gap-1">
+                              <Shield size={11} className="text-purple-600" />
+                              {u.adminUsername}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div className="flex justify-end pt-1">
+                      <div className="flex flex-col gap-1.5 pt-1">
                         {isOwner ? (
-                          <span className="text-xs font-semibold text-amber-600">Owner Account</span>
+                          <span className="text-xs font-semibold text-amber-600 text-right">Owner Account</span>
                         ) : (
-                          <button
-                            onClick={() => changeRole(u.id, u.role, u.username)}
-                            className={`w-full py-2 px-3 rounded-xl text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-1.5 ${
-                              isAdmin
-                                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                : 'bg-purple-600 text-white hover:bg-purple-700'
-                            }`}
-                          >
-                            {isAdmin ? (
-                              <>
-                                <Users size={14} />
-                                <span>Demote to Member</span>
-                              </>
-                            ) : (
-                              <>
-                                <Shield size={14} />
-                                <span>Promote to Admin</span>
-                              </>
-                            )}
-                          </button>
+                          <>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {u.blocked ? (
+                                <button
+                                  onClick={() => handleToggleBlock(u.id, true, u.username)}
+                                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                                >
+                                  <CheckCircle size={14} />
+                                  <span>Unblock</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleToggleBlock(u.id, false, u.username)}
+                                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center justify-center gap-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                                >
+                                  <UserX size={14} />
+                                  <span>Block</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => changeRole(u.id, u.role, u.username)}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center justify-center gap-1.5 ${
+                                  isAdmin
+                                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                                }`}
+                              >
+                                {isAdmin ? (
+                                  <>
+                                    <Users size={14} />
+                                    <span>Demote</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Shield size={14} />
+                                    <span>Promote Admin</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => openDeleteModal(u)}
+                              className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-all shadow-2xs flex items-center justify-center gap-1.5"
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete Account</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -800,6 +1150,164 @@ const OwnerDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation & Owner OTP Modal */}
+      {deleteModal.open && deleteModal.user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-scaleUp">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-rose-500 to-red-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
+                    <ShieldAlert size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Delete User Account</h3>
+                    <p className="text-xs text-rose-100 mt-0.5">Permanent & Irreversible Action</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={closeDeleteModal}
+                  className="text-white/80 hover:text-white p-1 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <XCircle size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* User Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
+                    {deleteModal.user.username.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 text-sm">{deleteModal.user.username}</div>
+                    <div className="text-xs text-slate-500">{deleteModal.user.email}</div>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
+                  {deleteModal.user.role === 'ROLE_ADMIN' ? 'Admin' : deleteModal.user.isGroupMember ? 'Group Member' : 'Member'}
+                </span>
+              </div>
+
+              {/* Warning Note */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800">
+                <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p>
+                  Deleting this account will permanently remove access, profile, accounts, and budgets. This cannot be undone.
+                </p>
+              </div>
+
+              {/* Error inside modal */}
+              {deleteModal.error && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+                  <XCircle size={15} className="flex-shrink-0" />
+                  <span>{deleteModal.error}</span>
+                </div>
+              )}
+
+              {/* Step 1: Type Username */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  1. Type the exact username <span className="text-rose-600 font-mono font-bold select-all">"{deleteModal.user.username}"</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteModal.typedUsername}
+                  onChange={(e) => setDeleteModal(prev => ({ ...prev, typedUsername: e.target.value, error: '' }))}
+                  placeholder={`Type "${deleteModal.user.username}" here`}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                />
+              </div>
+
+              {/* Step 2: Security OTP sent to Owner */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    2. Security Owner OTP:
+                  </label>
+                  <span className="text-[11px] text-slate-500 truncate max-w-[200px]" title={user?.email}>
+                    to: {user?.email}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={deleteModal.otp}
+                    onChange={(e) => setDeleteModal(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
+                    placeholder="6-digit OTP"
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono tracking-widest text-center focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendDeleteOtp}
+                    disabled={deleteModal.sendingOtp || deleteModal.countdown > 0}
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {deleteModal.sendingOtp ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Sending...</span>
+                      </>
+                    ) : deleteModal.countdown > 0 ? (
+                      <span>Resend ({deleteModal.countdown}s)</span>
+                    ) : (
+                      <>
+                        <KeyRound size={13} />
+                        <span>{deleteModal.otpSent ? 'Resend OTP' : 'Send OTP'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                {deleteModal.otpSent && (
+                  <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                    <CheckCircle size={12} />
+                    <span>Verification code sent to {user?.email}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={
+                    deleteModal.deleting ||
+                    deleteModal.typedUsername !== deleteModal.user.username ||
+                    deleteModal.otp.length !== 6
+                  }
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {deleteModal.deleting ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Deleting Account...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} />
+                      <span>Permanently Delete</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

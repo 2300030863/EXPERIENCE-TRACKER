@@ -452,7 +452,7 @@ function AdminDashboard() {
                               </span>
                             </td>
                             <td className="py-3.5 px-4">
-                              {u.blocked ? (
+                              {Boolean(u.blocked === true || u.blocked === 1 || u.blocked === '1' || (typeof u.blocked === 'object' && u.blocked?.data?.[0] === 1)) ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                   <Ban size={11} />
                                   Blocked
@@ -474,7 +474,7 @@ function AdminDashboard() {
                                   <Edit2 size={15} />
                                 </button>
                                 
-                                {u.blocked ? (
+                                {Boolean(u.blocked === true || u.blocked === 1 || u.blocked === '1' || (typeof u.blocked === 'object' && u.blocked?.data?.[0] === 1)) ? (
                                   <button
                                     onClick={() => handleUnblockUser(u.id)}
                                     className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -557,7 +557,7 @@ function AdminDashboard() {
                             <span>Edit</span>
                           </button>
                           
-                          {u.blocked ? (
+                          {Boolean(u.blocked === true || u.blocked === 1 || u.blocked === '1' || (typeof u.blocked === 'object' && u.blocked?.data?.[0] === 1)) ? (
                             <button
                               onClick={() => handleUnblockUser(u.id)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
