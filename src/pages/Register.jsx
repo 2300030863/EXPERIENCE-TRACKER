@@ -72,22 +72,33 @@ function Register() {
     const urlEmail = searchParams.get('email')
     const urlExp = searchParams.get('exp') || searchParams.get('expiresAt')
 
+    const activeEmail = (urlEmail || formData.email || '').trim()
+
     if (urlCode || urlEmail) {
       if (urlEmail) {
-        setFormData(prev => ({ ...prev, email: urlEmail.trim() }))
+        setFormData(prev => ({ ...prev, email: activeEmail }))
       }
       setOtpSent(true)
 
+      const cacheKey = activeEmail ? `otp_exp_reg_${activeEmail}` : 'otp_exp_reg_current'
+      const cachedExp = sessionStorage.getItem(cacheKey) || (urlExp ? parseInt(urlExp, 10) : null)
+
       let remainingSeconds = 300
-      if (urlExp) {
-        const expTime = parseInt(urlExp, 10)
-        if (!isNaN(expTime)) {
-          remainingSeconds = Math.max(0, Math.floor((expTime - Date.now()) / 1000))
+      if (cachedExp) {
+        const expNum = parseInt(cachedExp, 10)
+        if (!isNaN(expNum)) {
+          remainingSeconds = Math.max(0, Math.floor((expNum - Date.now()) / 1000))
         }
       }
 
-      startExpiryTimer(remainingSeconds)
-      startCooldown()
+      if (remainingSeconds > 0) {
+        sessionStorage.setItem(cacheKey, Date.now() + remainingSeconds * 1000)
+        startExpiryTimer(remainingSeconds)
+        startCooldown(Math.min(60, remainingSeconds))
+      } else if (cachedExp) {
+        setOtpExpiryTime(0)
+        setOtpError('Verification code expired (5-minute limit). Please click Resend to get a fresh code.')
+      }
 
       if (urlCode) {
         const clean = urlCode.toString().trim()
@@ -172,8 +183,16 @@ function Register() {
         toast.success('Verification code sent! Code expires in 5 minutes.')
       }
       setOtpSent(true)
-      startCooldown()
-      startExpiryTimer()
+      startCooldown(60)
+      const expTs = data.expiresAtTimestamp || (Date.now() + 300000)
+      sessionStorage.setItem(`otp_exp_reg_${formData.email}`, expTs)
+      sessionStorage.setItem('otp_exp_reg_current', expTs)
+      if (data.expiresAtTimestamp) {
+        const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
+        startExpiryTimer(remaining || 300)
+      } else {
+        startExpiryTimer(300)
+      }
       setTimeout(() => {
         if (otpRefs.current[0]) otpRefs.current[0].focus()
       }, 300)
@@ -412,8 +431,16 @@ function Register() {
       } else {
         toast.success('New 5-minute code sent!')
       }
-      startCooldown()
-      startExpiryTimer()
+      startCooldown(60)
+      const expTs = data.expiresAtTimestamp || (Date.now() + 300000)
+      sessionStorage.setItem(`otp_exp_reg_${formData.email}`, expTs)
+      sessionStorage.setItem('otp_exp_reg_current', expTs)
+      if (data.expiresAtTimestamp) {
+        const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
+        startExpiryTimer(remaining || 300)
+      } else {
+        startExpiryTimer(300)
+      }
       otpRefs.current[0]?.focus()
     } catch (error) {
       toast.error('Failed to resend code')

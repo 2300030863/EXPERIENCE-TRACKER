@@ -54,46 +54,72 @@ function ForgotPassword() {
     }
   }, [])
 
-  // Auto-fill code, email, and synchronized timer from URL (e.g. from "Copy & Auto-Fill Code" in email)
+  // Auto-fill code, email, and synchronized timer from URL and server DB
   useEffect(() => {
     const urlCode = searchParams.get('code') || searchParams.get('otp')
     const urlIdentifier = searchParams.get('identifier') || searchParams.get('email') || searchParams.get('username')
     const urlExp = searchParams.get('exp') || searchParams.get('expiresAt')
 
-    if (urlCode || urlIdentifier) {
-      if (urlIdentifier) {
-        const ident = urlIdentifier.trim()
-        setIdentifier(ident)
-        setLockedEmail(ident)
-        setLockedUsername(ident)
-        setIsLocked(true)
-      } else if (urlCode) {
-        setIsLocked(true)
-      }
+    const activeIdent = (urlIdentifier || identifier || '').trim()
 
-      // Synchronize exact real-time remaining countdown from expiration timestamp
-      let remainingSeconds = 300
-      if (urlExp) {
-        const expTime = parseInt(urlExp, 10)
-        if (!isNaN(expTime)) {
-          remainingSeconds = Math.max(0, Math.floor((expTime - Date.now()) / 1000))
+    if (urlIdentifier) {
+      setIdentifier(activeIdent)
+      setLockedEmail(activeIdent)
+      setLockedUsername(activeIdent)
+      setIsLocked(true)
+    } else if (urlCode) {
+      setIsLocked(true)
+    }
+
+    if (urlCode) {
+      const clean = urlCode.toString().trim()
+      if (/^\d{6}$/.test(clean)) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(clean).catch(() => {})
         }
+        setOtpValues(clean.split(''))
+        toast.success(`Verification code ${clean} auto-filled! Enter new password below.`)
       }
+    }
 
-      // Start the live ticking countdown
-      startExpiryTimer(remainingSeconds)
-      startCooldown()
+    // Check sessionStorage cache for instant render on refresh (persists remaining seconds)
+    let initialRemaining = 300
+    const cacheKey = activeIdent ? `otp_exp_${activeIdent}` : 'otp_exp_current'
+    const cachedExp = sessionStorage.getItem(cacheKey) || (urlExp ? parseInt(urlExp, 10) : null)
 
-      if (urlCode) {
-        const clean = urlCode.toString().trim()
-        if (/^\d{6}$/.test(clean)) {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(clean).catch(() => {})
+    if (cachedExp) {
+      const expNum = parseInt(cachedExp, 10)
+      if (!isNaN(expNum)) {
+        initialRemaining = Math.max(0, Math.floor((expNum - Date.now()) / 1000))
+      }
+    }
+
+    if (initialRemaining > 0) {
+      startExpiryTimer(initialRemaining)
+      startCooldown(Math.min(60, initialRemaining))
+    } else if (cachedExp) {
+      setOtpExpiryTime(0)
+      setErrorMessage('This verification link has expired (5-minute limit). Please click Resend Code to request a fresh code.')
+    }
+
+    // Authoritative Server Sync (ensures 100% clock synchronization across Laptop & Phone)
+    if (activeIdent) {
+      authAPI.getOtpStatus(activeIdent)
+        .then((res) => {
+          const data = res.data || {}
+          if (data.expired || data.remainingSeconds <= 0) {
+            setOtpExpiryTime(0)
+            if (expiryRef.current) clearInterval(expiryRef.current)
+            setErrorMessage('This verification link has expired (5-minute limit). Please click Resend Code to request a fresh code.')
+            sessionStorage.removeItem(cacheKey)
+          } else if (typeof data.remainingSeconds === 'number') {
+            sessionStorage.setItem(cacheKey, Date.now() + data.remainingSeconds * 1000)
+            startExpiryTimer(data.remainingSeconds)
+            startCooldown(Math.min(60, data.remainingSeconds))
+            setErrorMessage('')
           }
-          setOtpValues(clean.split(''))
-          toast.success(`Verification code ${clean} auto-filled! Enter new password below.`)
-        }
-      }
+        })
+        .catch(() => {})
     }
   }, [searchParams])
 
@@ -181,6 +207,9 @@ function ForgotPassword() {
       }
 
       startCooldown(60)
+      const expTs = data.expiresAtTimestamp || (Date.now() + 300000)
+      sessionStorage.setItem(`otp_exp_${data.email || query}`, expTs)
+      sessionStorage.setItem('otp_exp_current', expTs)
       if (data.expiresAtTimestamp) {
         const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
         startExpiryTimer(remaining || 300)
@@ -214,6 +243,9 @@ function ForgotPassword() {
     if (expiryRef.current) clearInterval(expiryRef.current)
     setResendCooldown(0)
     setOtpExpiryTime(0)
+    sessionStorage.removeItem(`otp_exp_${lockedEmail}`)
+    sessionStorage.removeItem(`otp_exp_${identifier}`)
+    sessionStorage.removeItem('otp_exp_current')
   }
 
   // Resend OTP
@@ -236,6 +268,9 @@ function ForgotPassword() {
         toast.success('A new 5-minute verification code has been sent!')
       }
       startCooldown(60)
+      const expTs = data.expiresAtTimestamp || (Date.now() + 300000)
+      sessionStorage.setItem(`otp_exp_${data.email || query}`, expTs)
+      sessionStorage.setItem('otp_exp_current', expTs)
       if (data.expiresAtTimestamp) {
         const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
         startExpiryTimer(remaining || 300)

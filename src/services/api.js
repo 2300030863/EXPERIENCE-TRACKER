@@ -24,8 +24,8 @@ const api = axios.create({
 // Request interceptor to add auth token conditionally
 api.interceptors.request.use(
   (config) => {
-    const publicEndpoints = ['/auth/login', '/auth/register', '/auth/google', '/auth/forgot-password', '/auth/reset-password']
-    const publicGetEndpoints = ['/api/occupations']
+    const publicEndpoints = ['/auth/login', '/auth/register', '/auth/google', '/auth/forgot-password', '/auth/reset-password', '/auth/otp-status']
+    const publicGetEndpoints = ['/api/occupations', '/auth/otp-status']
 
     const isPublic = publicEndpoints.some((endpoint) => config.url.includes(endpoint))
     const isPublicGet = publicGetEndpoints.some((endpoint) => config.url.includes(endpoint)) && config.method === 'get'
@@ -83,6 +83,7 @@ export const authAPI = {
   verifyOtp: (email, otp) => api.post('/auth/verify-otp', { email, otp }),
   forgotPassword: (identifier) => api.post('/auth/forgot-password', { identifier }),
   resetPassword: (payload) => api.post('/auth/reset-password', payload),
+  getOtpStatus: (identifier) => api.get('/auth/otp-status', { params: { identifier } }),
 }
 
 // Transaction API
