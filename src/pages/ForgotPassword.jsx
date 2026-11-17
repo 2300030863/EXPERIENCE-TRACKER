@@ -54,30 +54,45 @@ function ForgotPassword() {
     }
   }, [])
 
-  // Auto-fill code and email from URL (e.g. from "Copy & Auto-Fill Code" in email)
+  // Auto-fill code, email, and synchronized timer from URL (e.g. from "Copy & Auto-Fill Code" in email)
   useEffect(() => {
     const urlCode = searchParams.get('code') || searchParams.get('otp')
     const urlIdentifier = searchParams.get('identifier') || searchParams.get('email') || searchParams.get('username')
+    const urlExp = searchParams.get('exp') || searchParams.get('expiresAt')
 
-    if (urlCode) {
-      const clean = urlCode.toString().trim()
-      if (/^\d{6}$/.test(clean)) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(clean).catch(() => {})
+    if (urlCode || urlIdentifier) {
+      if (urlIdentifier) {
+        const ident = urlIdentifier.trim()
+        setIdentifier(ident)
+        setLockedEmail(ident)
+        setLockedUsername(ident)
+        setIsLocked(true)
+      } else if (urlCode) {
+        setIsLocked(true)
+      }
+
+      // Synchronize exact real-time remaining countdown from expiration timestamp
+      let remainingSeconds = 300
+      if (urlExp) {
+        const expTime = parseInt(urlExp, 10)
+        if (!isNaN(expTime)) {
+          remainingSeconds = Math.max(0, Math.floor((expTime - Date.now()) / 1000))
         }
-        if (urlIdentifier) {
-          const ident = urlIdentifier.trim()
-          setIdentifier(ident)
-          setLockedEmail(ident)
-          setLockedUsername(ident)
-          setIsLocked(true)
-        } else {
-          setIsLocked(true)
+      }
+
+      // Start the live ticking countdown
+      startExpiryTimer(remainingSeconds)
+      startCooldown()
+
+      if (urlCode) {
+        const clean = urlCode.toString().trim()
+        if (/^\d{6}$/.test(clean)) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(clean).catch(() => {})
+          }
+          setOtpValues(clean.split(''))
+          toast.success(`Verification code ${clean} auto-filled! Enter new password below.`)
         }
-        setOtpValues(clean.split(''))
-        setOtpExpiryTime(300)
-        setResendCooldown(60)
-        toast.success(`Verification code ${clean} copied & auto-filled! Enter new password below.`)
       }
     }
   }, [searchParams])
@@ -90,8 +105,8 @@ function ForgotPassword() {
     }
   }, [])
 
-  const startCooldown = () => {
-    setResendCooldown(60)
+  const startCooldown = (initialCooldown = 60) => {
+    setResendCooldown(initialCooldown)
     if (cooldownRef.current) clearInterval(cooldownRef.current)
     cooldownRef.current = setInterval(() => {
       setResendCooldown((prev) => {
@@ -104,10 +119,17 @@ function ForgotPassword() {
     }, 1000)
   }
 
-  // 5-minute (300 seconds) OTP expiration timer
-  const startExpiryTimer = () => {
-    setOtpExpiryTime(300)
+  // Live OTP expiration timer with custom start time in seconds
+  const startExpiryTimer = (initialSeconds = 300) => {
+    const startVal = Math.max(0, parseInt(initialSeconds, 10) || 300)
+    setOtpExpiryTime(startVal)
     if (expiryRef.current) clearInterval(expiryRef.current)
+
+    if (startVal <= 0) {
+      setErrorMessage('Verification code expired (5-minute limit). Please click Resend Code to get a fresh code.')
+      return
+    }
+
     expiryRef.current = setInterval(() => {
       setOtpExpiryTime((prev) => {
         if (prev <= 1) {
@@ -158,8 +180,13 @@ function ForgotPassword() {
         toast.success(data.message || 'Account located! 5-minute verification code sent to your registered email.')
       }
 
-      startCooldown()
-      startExpiryTimer()
+      startCooldown(60)
+      if (data.expiresAtTimestamp) {
+        const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
+        startExpiryTimer(remaining || 300)
+      } else {
+        startExpiryTimer(300)
+      }
 
       // Focus first OTP field
       setTimeout(() => {
@@ -208,8 +235,13 @@ function ForgotPassword() {
       } else {
         toast.success('A new 5-minute verification code has been sent!')
       }
-      startCooldown()
-      startExpiryTimer()
+      startCooldown(60)
+      if (data.expiresAtTimestamp) {
+        const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
+        startExpiryTimer(remaining || 300)
+      } else {
+        startExpiryTimer(300)
+      }
       if (otpRefs.current[0]) otpRefs.current[0].focus()
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || 'Failed to resend verification code'

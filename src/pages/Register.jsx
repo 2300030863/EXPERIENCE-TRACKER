@@ -66,31 +66,44 @@ function Register() {
     }
   }, [])
 
-  // Auto-fill code and email from URL parameters
+  // Auto-fill code, email, and synchronized timer from URL parameters
   useEffect(() => {
     const urlCode = searchParams.get('code') || searchParams.get('otp')
     const urlEmail = searchParams.get('email')
+    const urlExp = searchParams.get('exp') || searchParams.get('expiresAt')
 
-    if (urlCode) {
-      const clean = urlCode.toString().trim()
-      if (/^\d{6}$/.test(clean)) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(clean).catch(() => {})
+    if (urlCode || urlEmail) {
+      if (urlEmail) {
+        setFormData(prev => ({ ...prev, email: urlEmail.trim() }))
+      }
+      setOtpSent(true)
+
+      let remainingSeconds = 300
+      if (urlExp) {
+        const expTime = parseInt(urlExp, 10)
+        if (!isNaN(expTime)) {
+          remainingSeconds = Math.max(0, Math.floor((expTime - Date.now()) / 1000))
         }
-        if (urlEmail) {
-          setFormData(prev => ({ ...prev, email: urlEmail.trim() }))
+      }
+
+      startExpiryTimer(remainingSeconds)
+      startCooldown()
+
+      if (urlCode) {
+        const clean = urlCode.toString().trim()
+        if (/^\d{6}$/.test(clean)) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(clean).catch(() => {})
+          }
+          setOtpValues(clean.split(''))
+          toast.success(`Verification code ${clean} auto-filled!`)
         }
-        setOtpSent(true)
-        setOtpValues(clean.split(''))
-        setOtpExpiryTime(300)
-        setResendCooldown(60)
-        toast.success(`Verification code ${clean} copied & auto-filled!`)
       }
     }
   }, [searchParams])
 
-  const startCooldown = () => {
-    setResendCooldown(60)
+  const startCooldown = (initialCooldown = 60) => {
+    setResendCooldown(initialCooldown)
     if (cooldownRef.current) clearInterval(cooldownRef.current)
     cooldownRef.current = setInterval(() => {
       setResendCooldown(prev => {
@@ -103,10 +116,17 @@ function Register() {
     }, 1000)
   }
 
-  // 5-minute (300 seconds) OTP expiration timer
-  const startExpiryTimer = () => {
-    setOtpExpiryTime(300)
+  // Live OTP expiration timer with custom start time in seconds
+  const startExpiryTimer = (initialSeconds = 300) => {
+    const startVal = Math.max(0, parseInt(initialSeconds, 10) || 300)
+    setOtpExpiryTime(startVal)
     if (expiryRef.current) clearInterval(expiryRef.current)
+
+    if (startVal <= 0) {
+      setOtpError('Verification code expired (5-minute limit). Please click Resend to get a fresh code.')
+      return
+    }
+
     expiryRef.current = setInterval(() => {
       setOtpExpiryTime(prev => {
         if (prev <= 1) {
