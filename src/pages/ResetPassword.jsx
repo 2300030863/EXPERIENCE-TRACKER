@@ -59,9 +59,10 @@ function ResetPassword() {
         navigate('/login')
       }, 1500)
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Failed to reset password'
-      setErrorMessage(errorMsg)
-      toast.error(errorMsg)
+      const rawCode = error.response?.data?.code || (error.response?.status === 410 ? 'TOKEN_EXPIRED' : (error.errorCode || 'RESET_FAILED'))
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setErrorMessage(displayCode)
+      toast.error(displayCode)
     } finally {
       setLoading(false)
     }

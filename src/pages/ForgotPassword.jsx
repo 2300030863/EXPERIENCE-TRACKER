@@ -97,9 +97,11 @@ function ForgotPassword() {
     if (initialRemaining > 0) {
       startExpiryTimer(initialRemaining)
       startCooldown(Math.min(60, initialRemaining))
-    } else if (cachedExp) {
+    } else if (cachedExp || (urlExp && parseInt(urlExp, 10) <= Date.now())) {
       setOtpExpiryTime(0)
-      setErrorMessage('This verification link has expired (5-minute limit). Please click Resend Code to request a fresh code.')
+      setOtpValues(['', '', '', '', '', ''])
+      setErrorMessage('Error Code: OTP_EXPIRED')
+      sessionStorage.removeItem(cacheKey)
     }
 
     // Authoritative Server Sync (ensures 100% clock synchronization across Laptop & Phone)
@@ -107,10 +109,11 @@ function ForgotPassword() {
       authAPI.getOtpStatus(activeIdent)
         .then((res) => {
           const data = res.data || {}
-          if (data.expired || data.remainingSeconds <= 0) {
+          if (data.expired || data.remainingSeconds <= 0 || data.code === 'OTP_EXPIRED') {
             setOtpExpiryTime(0)
             if (expiryRef.current) clearInterval(expiryRef.current)
-            setErrorMessage('This verification link has expired (5-minute limit). Please click Resend Code to request a fresh code.')
+            setOtpValues(['', '', '', '', '', ''])
+            setErrorMessage('Error Code: OTP_EXPIRED')
             sessionStorage.removeItem(cacheKey)
           } else if (typeof data.remainingSeconds === 'number') {
             sessionStorage.setItem(cacheKey, Date.now() + data.remainingSeconds * 1000)
@@ -119,7 +122,16 @@ function ForgotPassword() {
             setErrorMessage('')
           }
         })
-        .catch(() => {})
+        .catch((err) => {
+          const code = err.response?.data?.code || (err.response?.status === 410 ? 'OTP_EXPIRED' : null)
+          if (code === 'OTP_EXPIRED') {
+            setOtpExpiryTime(0)
+            if (expiryRef.current) clearInterval(expiryRef.current)
+            setOtpValues(['', '', '', '', '', ''])
+            setErrorMessage('Error Code: OTP_EXPIRED')
+            sessionStorage.removeItem(cacheKey)
+          }
+        })
     }
   }, [searchParams])
 
@@ -152,7 +164,8 @@ function ForgotPassword() {
     if (expiryRef.current) clearInterval(expiryRef.current)
 
     if (startVal <= 0) {
-      setErrorMessage('Verification code expired (5-minute limit). Please click Resend Code to get a fresh code.')
+      setErrorMessage('Error Code: OTP_EXPIRED')
+      setOtpValues(['', '', '', '', '', ''])
       return
     }
 
@@ -160,7 +173,8 @@ function ForgotPassword() {
       setOtpExpiryTime((prev) => {
         if (prev <= 1) {
           clearInterval(expiryRef.current)
-          setErrorMessage('Verification code expired (5-minute limit). Please click Resend Code to get a fresh code.')
+          setErrorMessage('Error Code: OTP_EXPIRED')
+          setOtpValues(['', '', '', '', '', ''])
           return 0
         }
         return prev - 1
@@ -180,7 +194,8 @@ function ForgotPassword() {
     
     const query = identifier.trim()
     if (!query) {
-      toast.error('Please enter your username or email address')
+      toast.error('Error Code: IDENTIFIER_REQUIRED')
+      setErrorMessage('Error Code: IDENTIFIER_REQUIRED')
       return
     }
 
@@ -223,9 +238,10 @@ function ForgotPassword() {
       }, 300)
     } catch (error) {
       console.error('Forgot password lookup error:', error)
-      const msg = error.response?.data?.error || error.response?.data?.message || 'User was not found. Please check your username or email.'
-      setErrorMessage(msg)
-      toast.error(msg)
+      const rawCode = error.response?.data?.code || (error.response?.status === 404 ? 'USER_NOT_FOUND' : (error.errorCode || 'LOOKUP_FAILED'))
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setErrorMessage(displayCode)
+      toast.error(displayCode)
       setIsLocked(false)
     } finally {
       setLoading(false)
@@ -256,8 +272,10 @@ function ForgotPassword() {
     setOtpValues(['', '', '', '', '', ''])
 
     try {
-      const response = await authAPI.forgotPassword(lockedEmail || identifier)
+      const targetIdent = lockedEmail || identifier
+      const response = await authAPI.forgotPassword(targetIdent)
       const data = response.data || {}
+      setErrorMessage('')
       if (data.devOtp) {
         toast.success(`New verification code: ${data.devOtp}`, { duration: 10000 })
         const digits = data.devOtp.toString().split('').slice(0, 6)
@@ -269,7 +287,7 @@ function ForgotPassword() {
       }
       startCooldown(60)
       const expTs = data.expiresAtTimestamp || (Date.now() + 300000)
-      sessionStorage.setItem(`otp_exp_${data.email || query}`, expTs)
+      sessionStorage.setItem(`otp_exp_${targetIdent}`, expTs)
       sessionStorage.setItem('otp_exp_current', expTs)
       if (data.expiresAtTimestamp) {
         const remaining = Math.max(0, Math.floor((data.expiresAtTimestamp - Date.now()) / 1000))
@@ -279,9 +297,10 @@ function ForgotPassword() {
       }
       if (otpRefs.current[0]) otpRefs.current[0].focus()
     } catch (error) {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Failed to resend verification code'
-      toast.error(msg)
-      setErrorMessage(msg)
+      const rawCode = error.response?.data?.code || (error.errorCode || 'RESEND_FAILED')
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      toast.error(displayCode)
+      setErrorMessage(displayCode)
     } finally {
       setLoading(false)
     }
@@ -339,7 +358,7 @@ function ForgotPassword() {
   // OTP inputs handling
   const handleOtpChange = (index, value) => {
     if (otpExpiryTime <= 0) {
-      setErrorMessage('Verification code has expired. Please click Resend Code to request a new one.')
+      setErrorMessage('Error Code: OTP_EXPIRED')
       return
     }
 
@@ -376,7 +395,7 @@ function ForgotPassword() {
   const handleOtpPaste = (e) => {
     e.preventDefault()
     if (otpExpiryTime <= 0) {
-      setErrorMessage('Verification code has expired. Please click Resend Code to request a new one.')
+      setErrorMessage('Error Code: OTP_EXPIRED')
       return
     }
     const paste = (e.clipboardData || window.clipboardData)?.getData('text') || ''
@@ -395,7 +414,7 @@ function ForgotPassword() {
 
   const handlePasteClipboard = async () => {
     if (otpExpiryTime <= 0) {
-      setErrorMessage('Verification code has expired. Please click Resend Code to request a new one.')
+      setErrorMessage('Error Code: OTP_EXPIRED')
       return
     }
     try {
@@ -416,7 +435,7 @@ function ForgotPassword() {
         setErrorMessage('')
         otpRefs.current[cleanDigits.length]?.focus()
       } else {
-        toast.error('No 6-digit verification code found in clipboard')
+        toast.error('Error Code: OTP_REQUIRED')
       }
     } catch (err) {
       toast.error('Please tap and paste inside the box')
@@ -428,30 +447,34 @@ function ForgotPassword() {
     e.preventDefault()
 
     if (otpExpiryTime <= 0) {
-      toast.error('Verification code has expired. Please click Resend Code.')
-      setErrorMessage('Verification code has expired (5-minute limit). Please click Resend Code to receive a fresh code.')
+      setErrorMessage('Error Code: OTP_EXPIRED')
+      toast.error('Error Code: OTP_EXPIRED')
       return
     }
 
     const otp = otpValues.join('').trim()
 
     if (otp.length < 6) {
-      toast.error('Please enter the full 6-digit verification code')
+      toast.error('Error Code: OTP_REQUIRED')
+      setErrorMessage('Error Code: OTP_REQUIRED')
       return
     }
 
     if (!newPassword) {
-      toast.error('Please enter a new password')
+      toast.error('Error Code: PASSWORD_REQUIRED')
+      setErrorMessage('Error Code: PASSWORD_REQUIRED')
       return
     }
 
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long')
+      toast.error('Error Code: PASSWORD_TOO_SHORT')
+      setErrorMessage('Error Code: PASSWORD_TOO_SHORT')
       return
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match')
+      toast.error('Error Code: PASSWORDS_DO_NOT_MATCH')
+      setErrorMessage('Error Code: PASSWORDS_DO_NOT_MATCH')
       return
     }
 
@@ -472,9 +495,14 @@ function ForgotPassword() {
       }, 1500)
     } catch (error) {
       console.error('Reset password error:', error)
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Failed to reset password. Please check your code.'
-      setErrorMessage(msg)
-      toast.error(msg)
+      const rawCode = error.response?.data?.code || (error.response?.status === 410 ? 'OTP_EXPIRED' : (error.errorCode || error.response?.data?.error || 'RESET_FAILED'))
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setErrorMessage(displayCode)
+      toast.error(displayCode)
+      if (rawCode === 'OTP_EXPIRED' || error.response?.status === 410) {
+        setOtpExpiryTime(0)
+        setOtpValues(['', '', '', '', '', ''])
+      }
     } finally {
       setResetting(false)
     }
@@ -527,9 +555,9 @@ function ForgotPassword() {
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                Action Required
+                Security Alert
               </h4>
-              <p className="text-xs font-medium text-rose-700 mt-0.5">
+              <p className="text-xs font-mono font-bold text-rose-700 mt-0.5 tracking-wide">
                 {errorMessage}
               </p>
             </div>
@@ -627,12 +655,30 @@ function ForgotPassword() {
                     <span>Expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-pulse">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
                     <AlertTriangle size={12} />
-                    <span>Code Expired</span>
+                    <span>Error Code: OTP_EXPIRED</span>
                   </span>
                 )}
               </div>
+
+              {otpExpiryTime <= 0 && (
+                <div className="my-2 p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-rose-700 text-xs font-bold font-mono">
+                    <AlertTriangle size={14} className="shrink-0" />
+                    <span>Error Code: OTP_EXPIRED</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                    className="text-xs font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                    <span>Request New Code</span>
+                  </button>
+                </div>
+              )}
 
               <div className="flex justify-center gap-2 my-2">
                 {otpValues.map((val, idx) => (
@@ -751,9 +797,14 @@ function ForgotPassword() {
             </div>
 
             <button
-              type="submit"
-              disabled={resetting || (isLocked && otpExpiryTime <= 0)}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 active:scale-[0.99] disabled:opacity-60 transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed"
+              type={otpExpiryTime <= 0 ? "button" : "submit"}
+              onClick={otpExpiryTime <= 0 ? handleResendOtp : undefined}
+              disabled={resetting || (isLocked && loading)}
+              className={`w-full mt-2 py-3 px-4 rounded-xl font-semibold text-sm shadow-md active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer ${
+                otpExpiryTime <= 0
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-600/20 disabled:opacity-60 disabled:cursor-not-allowed'
+              }`}
             >
               {resetting ? (
                 <>
@@ -762,8 +813,8 @@ function ForgotPassword() {
                 </>
               ) : otpExpiryTime <= 0 ? (
                 <>
-                  <AlertTriangle size={16} />
-                  <span>Code Expired — Resend to Continue</span>
+                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                  <span>Error Code: OTP_EXPIRED — Request New Code</span>
                 </>
               ) : (
                 <>

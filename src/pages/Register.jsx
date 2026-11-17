@@ -95,9 +95,11 @@ function Register() {
         sessionStorage.setItem(cacheKey, Date.now() + remainingSeconds * 1000)
         startExpiryTimer(remainingSeconds)
         startCooldown(Math.min(60, remainingSeconds))
-      } else if (cachedExp) {
+      } else if (cachedExp || (urlExp && parseInt(urlExp, 10) <= Date.now())) {
         setOtpExpiryTime(0)
-        setOtpError('Verification code expired (5-minute limit). Please click Resend to get a fresh code.')
+        setOtpValues(['', '', '', '', '', ''])
+        setOtpError('Error Code: OTP_EXPIRED')
+        sessionStorage.removeItem(cacheKey)
       }
 
       if (urlCode) {
@@ -134,7 +136,8 @@ function Register() {
     if (expiryRef.current) clearInterval(expiryRef.current)
 
     if (startVal <= 0) {
-      setOtpError('Verification code expired (5-minute limit). Please click Resend to get a fresh code.')
+      setOtpError('Error Code: OTP_EXPIRED')
+      setOtpValues(['', '', '', '', '', ''])
       return
     }
 
@@ -142,7 +145,8 @@ function Register() {
       setOtpExpiryTime(prev => {
         if (prev <= 1) {
           clearInterval(expiryRef.current)
-          setOtpError('Verification code expired (5-minute limit). Please click Resend to get a fresh code.')
+          setOtpError('Error Code: OTP_EXPIRED')
+          setOtpValues(['', '', '', '', '', ''])
           return 0
         }
         return prev - 1
@@ -283,7 +287,7 @@ function Register() {
 
   const handleOtpChange = (index, value) => {
     if (otpExpiryTime <= 0) {
-      setOtpError('Verification code has expired. Please click Resend Code.')
+      setOtpError('Error Code: OTP_EXPIRED')
       return
     }
 
@@ -332,7 +336,7 @@ function Register() {
   const handleOtpPaste = (e) => {
     e.preventDefault()
     if (otpExpiryTime <= 0) {
-      setOtpError('Verification code has expired. Please click Resend Code.')
+      setOtpError('Error Code: OTP_EXPIRED')
       return
     }
     const paste = (e.clipboardData || window.clipboardData)?.getData('text') || ''
@@ -354,7 +358,7 @@ function Register() {
 
   const handlePasteClipboard = async () => {
     if (otpExpiryTime <= 0) {
-      setOtpError('Verification code has expired. Please click Resend Code.')
+      setOtpError('Error Code: OTP_EXPIRED')
       return
     }
     try {
@@ -377,7 +381,7 @@ function Register() {
         setOtpError('')
         otpRefs.current[cleanDigits.length]?.focus()
       } else {
-        toast.error('No 6-digit verification code found in clipboard')
+        toast.error('Error Code: OTP_REQUIRED')
       }
     } catch (err) {
       toast.error('Please tap and paste inside the box')
@@ -386,7 +390,8 @@ function Register() {
 
   const verifyOtp = async (otp) => {
     if (otpExpiryTime <= 0) {
-      setOtpError('Verification code has expired. Please click Resend Code.')
+      setOtpError('Error Code: OTP_EXPIRED')
+      setOtpValues(['', '', '', '', '', ''])
       return
     }
 
@@ -400,15 +405,20 @@ function Register() {
         toast.success('Email verified successfully!')
         setTimeout(() => setStep(2), 1200)
       } else {
-        setOtpError('Invalid verification code')
+        setOtpError('Error Code: OTP_INVALID')
         setOtpValues(['', '', '', '', '', ''])
         otpRefs.current[0]?.focus()
       }
     } catch (error) {
-      const msg = error.response?.data?.message || 'Invalid or expired code'
-      setOtpError(typeof msg === 'string' ? msg : 'Invalid or expired code')
+      const rawCode = error.response?.data?.code || (error.response?.status === 410 ? 'OTP_EXPIRED' : (error.errorCode || 'OTP_INVALID'))
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setOtpError(displayCode)
       setOtpValues(['', '', '', '', '', ''])
-      otpRefs.current[0]?.focus()
+      if (rawCode === 'OTP_EXPIRED' || error.response?.status === 410) {
+        setOtpExpiryTime(0)
+      } else {
+        otpRefs.current[0]?.focus()
+      }
     } finally {
       setOtpVerifying(false)
     }
@@ -443,7 +453,10 @@ function Register() {
       }
       otpRefs.current[0]?.focus()
     } catch (error) {
-      toast.error('Failed to resend code')
+      const rawCode = error.response?.data?.code || (error.errorCode || 'RESEND_FAILED')
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setOtpError(displayCode)
+      toast.error(displayCode)
     } finally {
       setOtpSending(false)
     }
@@ -655,12 +668,30 @@ function Register() {
                       <span>Expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-pulse">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
                       <AlertTriangle size={12} />
-                      <span>Code Expired</span>
+                      <span>Error Code: OTP_EXPIRED</span>
                     </span>
                   )}
                 </div>
+
+                {otpExpiryTime <= 0 && (
+                  <div className="my-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-rose-700 text-xs font-bold font-mono">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span>Error Code: OTP_EXPIRED</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={otpSending}
+                      className="text-xs font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw size={12} className={otpSending ? "animate-spin" : ""} />
+                      <span>Request New Code</span>
+                    </button>
+                  </div>
+                )}
 
                 <p className="text-xs text-slate-500 mb-3">
                   A 5-minute code was dispatched to <strong className="text-slate-700 font-semibold">{formData.email}</strong>.
@@ -706,9 +737,11 @@ function Register() {
                 </div>
 
                 {otpError && (
-                  <p className="text-xs font-bold text-rose-600 text-center mt-2 animate-in fade-in">
-                    {otpError}
-                  </p>
+                  <div className="mt-2.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-center">
+                    <p className="text-xs font-mono font-bold text-rose-700">
+                      {otpError}
+                    </p>
+                  </div>
                 )}
 
                 {otpVerifying && (
