@@ -11,11 +11,14 @@ import {
   ArrowRight, 
   Eye, 
   EyeOff, 
-  RefreshCw,
-  ShieldCheck,
-  Clock,
-  AlertTriangle,
-  Clipboard 
+  RefreshCw, 
+  ShieldCheck, 
+  Clock, 
+  AlertTriangle, 
+  Clipboard,
+  ExternalLink,
+  Send,
+  MailCheck
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { authAPI } from '../services/api'
@@ -25,6 +28,8 @@ function ForgotPassword() {
   const [searchParams] = useSearchParams()
   const [identifier, setIdentifier] = useState('')
   const [isLocked, setIsLocked] = useState(false)
+  const [emailDispatched, setEmailDispatched] = useState(false)
+  const [manualEntryMode, setManualEntryMode] = useState(false)
   const [lockedEmail, setLockedEmail] = useState('')
   const [lockedUsername, setLockedUsername] = useState('')
   
@@ -46,6 +51,10 @@ function ForgotPassword() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  const urlCode = searchParams.get('code') || searchParams.get('otp')
+  const hasUrlCode = Boolean(urlCode && /^\d{6}$/.test(urlCode.toString().trim()))
+  const isResetFormVisible = Boolean(hasUrlCode || searchParams.get('token'))
+
   // Auto-populate from last login
   useEffect(() => {
     const saved = localStorage.getItem('lastUsername')
@@ -56,7 +65,7 @@ function ForgotPassword() {
 
   // Auto-fill code, email, and synchronized timer from URL and server DB
   useEffect(() => {
-    const urlCode = searchParams.get('code') || searchParams.get('otp')
+    const urlCodeParam = searchParams.get('code') || searchParams.get('otp')
     const urlIdentifier = searchParams.get('identifier') || searchParams.get('email') || searchParams.get('username')
     const urlExp = searchParams.get('exp') || searchParams.get('expiresAt')
 
@@ -66,18 +75,17 @@ function ForgotPassword() {
       setIdentifier(activeIdent)
       setLockedEmail(activeIdent)
       setLockedUsername(activeIdent)
-      setIsLocked(true)
-    } else if (urlCode) {
-      setIsLocked(true)
     }
 
-    if (urlCode) {
-      const clean = urlCode.toString().trim()
+    if (urlCodeParam) {
+      const clean = urlCodeParam.toString().trim()
       if (/^\d{6}$/.test(clean)) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(clean).catch(() => {})
         }
         setOtpValues(clean.split(''))
+        setManualEntryMode(true)
+        setIsLocked(true)
         toast.success(`Verification code ${clean} auto-filled! Enter new password below.`)
       }
     }
@@ -206,8 +214,10 @@ function ForgotPassword() {
       const response = await authAPI.forgotPassword(query)
       const data = response.data
 
-      // User found in database! Lock the email/username and show OTP
-      setIsLocked(true)
+      // User found in database! Show "Check Your Email" screen (do not show direct reset page)
+      setEmailDispatched(true)
+      setIsLocked(false)
+      setManualEntryMode(false)
       setLockedEmail(data.email || query)
       setLockedUsername(data.username || query)
 
@@ -218,7 +228,7 @@ function ForgotPassword() {
         digits.forEach((d, i) => { newVals[i] = d })
         setOtpValues(newVals)
       } else {
-        toast.success(data.message || 'Account located! 5-minute verification code sent to your registered email.')
+        toast.success(data.message || 'Verification link and code sent to your registered email.')
       }
 
       startCooldown(60)
@@ -231,17 +241,13 @@ function ForgotPassword() {
       } else {
         startExpiryTimer(300)
       }
-
-      // Focus first OTP field
-      setTimeout(() => {
-        if (otpRefs.current[0]) otpRefs.current[0].focus()
-      }, 300)
     } catch (error) {
       console.error('Forgot password lookup error:', error)
       const rawCode = error.response?.data?.code || (error.response?.status === 404 ? 'USER_NOT_FOUND' : (error.errorCode || 'LOOKUP_FAILED'))
       const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
       setErrorMessage(displayCode)
       toast.error(displayCode)
+      setEmailDispatched(false)
       setIsLocked(false)
     } finally {
       setLoading(false)
@@ -251,6 +257,8 @@ function ForgotPassword() {
   // Unlock to allow editing username/email again
   const handleUnlock = () => {
     setIsLocked(false)
+    setEmailDispatched(false)
+    setManualEntryMode(false)
     setOtpValues(['', '', '', '', '', ''])
     setNewPassword('')
     setConfirmPassword('')
@@ -534,18 +542,28 @@ function ForgotPassword() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-7 sm:p-9 relative z-10 transition-all overflow-hidden">
         {/* Brand Icon Badge */}
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/25 mx-auto mb-4">
-          <KeyRound className="w-7 h-7 stroke-[2.2]" />
+          {emailDispatched && !isResetFormVisible ? (
+            <MailCheck className="w-7 h-7 stroke-[2.2]" />
+          ) : (
+            <KeyRound className="w-7 h-7 stroke-[2.2]" />
+          )}
         </div>
 
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-            {isLocked ? 'Enter Verification Code' : 'Forgot Password'}
+            {isResetFormVisible 
+              ? 'Reset Your Password' 
+              : emailDispatched 
+                ? 'Check Your Email' 
+                : 'Forgot Password'}
           </h1>
           <p className="text-sm text-slate-500 mt-1.5">
-            {isLocked 
-              ? 'We sent a 5-minute code to your registered email' 
-              : 'Enter your username or email to locate your account'}
+            {isResetFormVisible 
+              ? 'Enter your verification code and choose a new password' 
+              : emailDispatched 
+                ? 'We sent a verification link to your registered email' 
+                : 'Enter your username or email to locate your account'}
           </p>
         </div>
 
@@ -564,8 +582,8 @@ function ForgotPassword() {
           </div>
         )}
 
-        {/* STEP 1: Search and Lock Email */}
-        {!isLocked ? (
+        {/* VIEW 1: Search and Request Reset Link */}
+        {!isResetFormVisible && !emailDispatched && (
           <form className="space-y-4" onSubmit={handleFindUserAndSendOtp}>
             <div>
               <label 
@@ -603,14 +621,109 @@ function ForgotPassword() {
                 </>
               ) : (
                 <>
-                  <span>Find Account & Send OTP</span>
+                  <span>Send Reset Link &amp; Code</span>
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
             </button>
           </form>
-        ) : (
-          /* STEP 2: Email Locked + Direct OTP with 5-Min Expiry + New Password */
+        )}
+
+        {/* VIEW 2: Check Your Email (Go to email screen) */}
+        {!isResetFormVisible && emailDispatched && (
+          <div className="space-y-5 text-center animate-in fade-in duration-200">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mx-auto shadow-sm">
+              <MailCheck className="w-8 h-8 stroke-[2.2]" />
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500">
+                We sent a password reset link and verification code to:
+              </p>
+              <div className="mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
+                <Mail size={13} className="text-indigo-600" />
+                <span>{lockedEmail || identifier}</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center">
+              <div className="mb-2">
+                {otpExpiryTime > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+                    <Clock size={13} className="animate-pulse text-amber-600" />
+                    <span>Link expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
+                    <AlertTriangle size={13} />
+                    <span>Error Code: OTP_EXPIRED</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                Open the email on your device and click <strong>Copy &amp; Auto-Fill Code</strong> to open the password reset page.
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="space-y-2 pt-1">
+              {otpExpiryTime > 0 ? (
+                <a
+                  href="https://mail.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                >
+                  <Mail size={16} />
+                  <span>Open Gmail Inbox</span>
+                  <ExternalLink size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={loading}
+                  className="w-full py-3.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm shadow-md shadow-rose-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                  <span>Error Code: OTP_EXPIRED — Resend Email</span>
+                </button>
+              )}
+
+              {/* Resend option */}
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-2 px-1">
+                <span>Didn't receive email?</span>
+                {resendCooldown > 0 ? (
+                  <span className="font-medium text-slate-400">
+                    Resend in {resendCooldown}s
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                    className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                  >
+                    Resend Email
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleUnlock}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                Use a different email or username
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: Reset Password Form (Opened from email link or manual entry) */}
+        {isResetFormVisible && (
           <form className="space-y-4 animate-in fade-in duration-200" onSubmit={handleResetPassword}>
             {/* Locked Email Indicator */}
             <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-between">

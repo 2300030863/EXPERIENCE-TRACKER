@@ -19,7 +19,9 @@ import {
   RefreshCw,
   Clock,
   AlertTriangle,
-  Clipboard
+  Clipboard,
+  ExternalLink,
+  MailCheck
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { COUNTRIES } from '../utils/currency'
@@ -57,6 +59,9 @@ function Register() {
   
   const { register } = useAuth()
   const navigate = useNavigate()
+
+  const urlCodeParam = searchParams.get('code') || searchParams.get('otp')
+  const hasUrlCode = Boolean(urlCodeParam && /^\d{6}$/.test(urlCodeParam.toString().trim()))
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -503,13 +508,23 @@ function Register() {
   }
 
   const getStepTitle = () => {
-    if (step === 1) return otpVerified ? 'Email Verified' : 'Verify Your Email'
+    if (step === 1) {
+      if (otpVerified) return 'Email Verified'
+      if (hasUrlCode) return 'Verify Your Email'
+      if (otpSent) return 'Check Your Email'
+      return 'Verify Your Email'
+    }
     if (step === 2) return 'Personal Details'
     return 'Choose Your Occupation'
   }
 
   const getStepSubtitle = () => {
-    if (step === 1) return otpVerified ? 'Redirecting to your account details...' : 'We will send a 6-digit verification code to your inbox (valid for 5 minutes)'
+    if (step === 1) {
+      if (otpVerified) return 'Redirecting to your account details...'
+      if (hasUrlCode) return 'Verification code auto-filled from your email. Click verify to continue.'
+      if (otpSent) return `We sent a 5-minute verification link to ${formData.email}`
+      return 'We will send a 6-digit verification code to your inbox (valid for 5 minutes)'
+    }
     if (step === 2) return 'Set up your account profile and currency preference'
     return 'We will generate personalized financial categories for your role'
   }
@@ -610,30 +625,31 @@ function Register() {
         {/* STEP 1: Email Verification */}
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-200">
-            <div>
-              <label 
-                htmlFor="email" 
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
-              >
-                Work or Personal Email *
-              </label>
-              <div className="flex gap-2.5">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="name@company.com"
-                  disabled={otpVerified || otpSending || otpSent}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white disabled:opacity-60 transition-all"
-                />
-                {!otpVerified && (
+            {/* VIEW 1A: Initial Email Input (Before sending OTP) */}
+            {!otpSent && !hasUrlCode && (
+              <div>
+                <label 
+                  htmlFor="email" 
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
+                >
+                  Work or Personal Email *
+                </label>
+                <div className="flex gap-2.5">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="name@company.com"
+                    disabled={otpSending}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white disabled:opacity-60 transition-all"
+                  />
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    disabled={otpSending || !formData.email || (resendCooldown > 0 && otpSent)}
+                    disabled={otpSending || !formData.email}
                     className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-xs uppercase tracking-wider shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-50 transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {otpSending ? (
@@ -641,27 +657,129 @@ function Register() {
                         <RefreshCw size={13} className="animate-spin" />
                         Sending
                       </span>
-                    ) : (resendCooldown > 0 && otpSent) ? (
-                      `Wait ${resendCooldown}s`
-                    ) : otpSent ? (
-                      'Resend'
                     ) : (
                       'Send OTP'
                     )}
                   </button>
-                )}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">
+                  We will dispatch a 5-minute verification link to confirm your email.
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* OTP Input Section */}
-            {otpSent && !otpVerified && (
-              <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Enter 6-Digit Code
-                  </span>
-                  
-                  {/* Live 5-Minute Countdown Badge */}
+            {/* VIEW 1B: Check Your Email (Shown after sending OTP until email link is opened) */}
+            {otpSent && !hasUrlCode && !otpVerified && (
+              <div className="space-y-5 text-center animate-in fade-in duration-200">
+                <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mx-auto shadow-sm">
+                  <MailCheck className="w-8 h-8 stroke-[2.2]" />
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500">
+                    We sent a 5-minute verification link and code to:
+                  </p>
+                  <div className="mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
+                    <Mail size={13} className="text-indigo-600" />
+                    <span>{formData.email}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100/80 text-center">
+                  <div className="mb-2">
+                    {otpExpiryTime > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+                        <Clock size={13} className="animate-pulse text-amber-600" />
+                        <span>Link expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
+                        <AlertTriangle size={13} />
+                        <span>Error Code: OTP_EXPIRED</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-600 text-xs leading-relaxed">
+                    Open your email and tap <strong>Copy &amp; Auto-Fill Code</strong> to verify your account and continue.
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2 pt-1">
+                  {otpExpiryTime > 0 ? (
+                    <a
+                      href="https://mail.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                    >
+                      <Mail size={16} />
+                      <span>Open Gmail Inbox</span>
+                      <ExternalLink size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={otpSending}
+                      className="w-full py-3.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm shadow-md shadow-rose-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <RefreshCw size={16} className={otpSending ? "animate-spin" : ""} />
+                      <span>Error Code: OTP_EXPIRED — Request New Code</span>
+                    </button>
+                  )}
+
+                  {/* Resend option */}
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-2 px-1">
+                    <span>Didn't receive email?</span>
+                    {resendCooldown > 0 ? (
+                      <span className="font-medium text-slate-400">
+                        Resend in {resendCooldown}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={otpSending}
+                        className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                      >
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setOtpSent(false); setOtpValues(['', '', '', '', '', '']); }}
+                    className="text-xs font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    Change email address
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 1C: Verify Code Form (Opened via email link with code auto-filled) */}
+            {hasUrlCode && !otpVerified && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Locked Email Indicator */}
+                <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Mail size={15} className="stroke-[2.5]" />
+                    </div>
+                    <div className="truncate">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                        Email Detected
+                      </span>
+                      <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+                        {formData.email}
+                      </p>
+                    </div>
+                  </div>
+
                   {otpExpiryTime > 0 ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
                       <Clock size={12} className="animate-pulse text-amber-600" />
@@ -676,7 +794,7 @@ function Register() {
                 </div>
 
                 {otpExpiryTime <= 0 && (
-                  <div className="my-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-rose-700 text-xs font-bold font-mono">
                       <AlertTriangle size={14} className="shrink-0" />
                       <span>Error Code: OTP_EXPIRED</span>
@@ -692,10 +810,6 @@ function Register() {
                     </button>
                   </div>
                 )}
-
-                <p className="text-xs text-slate-500 mb-3">
-                  A 5-minute code was dispatched to <strong className="text-slate-700 font-semibold">{formData.email}</strong>.
-                </p>
 
                 <div className="flex justify-center gap-2 sm:gap-3 my-3">
                   {otpValues.map((val, idx) => (
@@ -724,7 +838,7 @@ function Register() {
                 </div>
 
                 {/* Quick Paste Code Action */}
-                <div className="flex justify-center my-2">
+                <div className="flex justify-center my-1">
                   <button
                     type="button"
                     onClick={handlePasteClipboard}
@@ -737,36 +851,65 @@ function Register() {
                 </div>
 
                 {otpError && (
-                  <div className="mt-2.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-center">
+                  <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-center">
                     <p className="text-xs font-mono font-bold text-rose-700">
                       {otpError}
                     </p>
                   </div>
                 )}
 
-                {otpVerifying && (
-                  <div className="flex items-center justify-center gap-2 text-xs font-semibold text-indigo-600 mt-2">
-                    <RefreshCw size={13} className="animate-spin" />
-                    <span>Verifying code...</span>
-                  </div>
-                )}
+                {/* Verify Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fullOtp = otpValues.join('').trim()
+                    if (fullOtp.length === 6) {
+                      verifyOtp(fullOtp)
+                    } else {
+                      setOtpError('Error Code: OTP_REQUIRED')
+                    }
+                  }}
+                  disabled={otpVerifying || (otpExpiryTime <= 0 && !otpSending)}
+                  className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm shadow-md active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer ${
+                    otpExpiryTime <= 0
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-600/20 disabled:opacity-60 disabled:cursor-not-allowed'
+                  }`}
+                >
+                  {otpVerifying ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Verifying Email...</span>
+                    </>
+                  ) : otpExpiryTime <= 0 ? (
+                    <>
+                      <RefreshCw size={16} className={otpSending ? "animate-spin" : ""} />
+                      <span>Error Code: OTP_EXPIRED — Request New Code</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      <span>Verify Email &amp; Continue</span>
+                    </>
+                  )}
+                </button>
 
-                <div className="text-center mt-4 pt-3 border-t border-slate-200/60">
-                  <p className="text-xs text-slate-500">
-                    Didn't receive code or expired?{' '}
-                    {resendCooldown > 0 ? (
-                      <span className="font-semibold text-slate-700">Resend available in {resendCooldown}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleResendOtp}
-                        disabled={otpSending}
-                        className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
-                      >
-                        Resend New Code
-                      </button>
-                    )}
-                  </p>
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 px-1">
+                  <span>Didn't receive code?</span>
+                  {resendCooldown > 0 ? (
+                    <span className="font-medium text-slate-400">
+                      Resend in {resendCooldown}s
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={otpSending}
+                      className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                    >
+                      Resend Code
+                    </button>
+                  )}
                 </div>
               </div>
             )}
