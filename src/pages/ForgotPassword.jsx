@@ -35,6 +35,8 @@ function ForgotPassword() {
   
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [otpVerified, setOtpVerified] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   // OTP State
@@ -259,6 +261,8 @@ function ForgotPassword() {
     setIsLocked(false)
     setEmailDispatched(false)
     setManualEntryMode(false)
+    setOtpVerified(false)
+    setVerifyingOtp(false)
     setOtpValues(['', '', '', '', '', ''])
     setNewPassword('')
     setConfirmPassword('')
@@ -450,9 +454,9 @@ function ForgotPassword() {
     }
   }
 
-  // Submit Password Reset
-  const handleResetPassword = async (e) => {
-    e.preventDefault()
+  // Verify OTP First (matching Register flow)
+  const handleVerifyOtp = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
 
     if (otpExpiryTime <= 0) {
       setErrorMessage('Error Code: OTP_EXPIRED')
@@ -461,8 +465,42 @@ function ForgotPassword() {
     }
 
     const otp = otpValues.join('').trim()
-
     if (otp.length < 6) {
+      toast.error('Error Code: OTP_REQUIRED')
+      setErrorMessage('Error Code: OTP_REQUIRED')
+      return
+    }
+
+    setVerifyingOtp(true)
+    setErrorMessage('')
+
+    try {
+      await authAPI.verifyOtp(lockedEmail || identifier, otp)
+      setOtpVerified(true)
+      toast.success('Verification code confirmed! Now enter your new password.')
+    } catch (error) {
+      console.error('Verify OTP error:', error)
+      const rawCode = error.response?.data?.code || (error.response?.status === 410 ? 'OTP_EXPIRED' : (error.errorCode || error.response?.data?.message || 'OTP_INVALID'))
+      const displayCode = rawCode.startsWith('Error Code:') ? rawCode : `Error Code: ${rawCode}`
+      setErrorMessage(displayCode)
+      toast.error(displayCode)
+      if (rawCode === 'OTP_EXPIRED' || error.response?.status === 410) {
+        setOtpExpiryTime(0)
+        setOtpValues(['', '', '', '', '', ''])
+      }
+    } finally {
+      setVerifyingOtp(false)
+    }
+  }
+
+  // Submit Password Reset
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+
+    const token = searchParams.get('token')
+    const otp = otpValues.join('').trim()
+
+    if (!token && !otpVerified && otp.length < 6) {
       toast.error('Error Code: OTP_REQUIRED')
       setErrorMessage('Error Code: OTP_REQUIRED')
       return
@@ -490,14 +528,17 @@ function ForgotPassword() {
     setErrorMessage('')
 
     try {
-      await authAPI.resetPassword({
-        email: lockedEmail || identifier,
-        otp,
-        newPassword
-      })
+      const payload = token 
+        ? { token, newPassword } 
+        : { email: lockedEmail || identifier, identifier: lockedEmail || identifier, otp, newPassword }
+      
+      const response = await authAPI.resetPassword(payload)
 
       if (expiryRef.current) clearInterval(expiryRef.current)
-      toast.success('Password has been reset successfully! Redirecting to login...')
+      toast.success(response.data?.message || 'Password has been reset successfully! Redirecting to login...')
+      sessionStorage.removeItem(`otp_exp_${lockedEmail}`)
+      sessionStorage.removeItem(`otp_exp_${identifier}`)
+      sessionStorage.removeItem('otp_exp_current')
       setTimeout(() => {
         navigate('/login')
       }, 1500)
@@ -510,6 +551,7 @@ function ForgotPassword() {
       if (rawCode === 'OTP_EXPIRED' || error.response?.status === 410) {
         setOtpExpiryTime(0)
         setOtpValues(['', '', '', '', '', ''])
+        setOtpVerified(false)
       }
     } finally {
       setResetting(false)
@@ -517,14 +559,14 @@ function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-6 sm:py-10 px-3 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
       {/* Background Ambience */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-indigo-100/50 via-purple-50/30 to-transparent blur-3xl pointer-events-none -z-10" />
       <div className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Navigation Pill */}
-      <div className="w-full max-w-md mb-4 flex justify-between items-center z-10">
+      <div className="w-full max-w-md mb-4 flex justify-between items-center z-10 px-1">
         <Link
           to="/login"
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white text-xs font-semibold text-slate-600 hover:text-indigo-600 shadow-sm border border-slate-200/80 hover:border-slate-300 transition-all group"
@@ -539,7 +581,7 @@ function ForgotPassword() {
       </div>
 
       {/* Main Card */}
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-7 sm:p-9 relative z-10 transition-all overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-5 sm:p-7 md:p-9 relative z-10 transition-all overflow-hidden">
         {/* Brand Icon Badge */}
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/25 mx-auto mb-4">
           {emailDispatched && !isResetFormVisible ? (
@@ -553,14 +595,14 @@ function ForgotPassword() {
         <div className="text-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             {isResetFormVisible 
-              ? 'Reset Your Password' 
+              ? (otpVerified || searchParams.get('token') ? 'Create New Password' : 'Enter Verification Code')
               : emailDispatched 
                 ? 'Check Your Email' 
                 : 'Forgot Password'}
           </h1>
           <p className="text-sm text-slate-500 mt-1.5">
             {isResetFormVisible 
-              ? 'Enter your verification code and choose a new password' 
+              ? (otpVerified || searchParams.get('token') ? 'Enter and confirm your new password below' : 'We sent a 5-minute code to your registered email')
               : emailDispatched 
                 ? 'We sent a verification link to your registered email' 
                 : 'Enter your username or email to locate your account'}
@@ -724,223 +766,268 @@ function ForgotPassword() {
 
         {/* VIEW 3: Reset Password Form (Opened from email link or manual entry) */}
         {isResetFormVisible && (
-          <form className="space-y-4 animate-in fade-in duration-200" onSubmit={handleResetPassword}>
-            {/* Locked Email Indicator */}
-            <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                  <Lock size={15} className="stroke-[2.5]" />
-                </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
-                      Account Verified
-                    </span>
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* STAGE 1: Verify OTP Code (same as creating user page flow) */}
+            {!otpVerified && !searchParams.get('token') ? (
+              <div className="space-y-4">
+                {/* Locked Email Indicator */}
+                <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Lock size={15} className="stroke-[2.5]" />
+                    </div>
+                    <div className="truncate">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                          Account Verified
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 truncate mt-0.5" title={lockedEmail}>
+                        {lockedEmail || identifier}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs font-semibold text-slate-800 truncate mt-0.5" title={lockedEmail}>
-                    {lockedEmail}
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={handleUnlock}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 px-2.5 py-1 rounded-lg hover:bg-white transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                title="Change username or email"
-              >
-                <Unlock size={12} />
-                <span>Change</span>
-              </button>
-            </div>
-
-            {/* 6-Digit OTP Section with 5-Minute Countdown */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Verification Code *
-                </label>
-
-                {/* Live 5-Minute Countdown Badge */}
-                {otpExpiryTime > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
-                    <Clock size={12} className="animate-pulse text-amber-600" />
-                    <span>Expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
-                    <AlertTriangle size={12} />
-                    <span>Error Code: OTP_EXPIRED</span>
-                  </span>
-                )}
-              </div>
-
-              {otpExpiryTime <= 0 && (
-                <div className="my-2 p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-rose-700 text-xs font-bold font-mono">
-                    <AlertTriangle size={14} className="shrink-0" />
-                    <span>Error Code: OTP_EXPIRED</span>
-                  </div>
                   <button
                     type="button"
-                    onClick={handleResendOtp}
-                    disabled={loading}
-                    className="text-xs font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 cursor-pointer"
+                    onClick={handleUnlock}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 px-2.5 py-1 rounded-lg hover:bg-white transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                    title="Change username or email"
                   >
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-                    <span>Request New Code</span>
+                    <Unlock size={12} />
+                    <span>Change</span>
                   </button>
                 </div>
-              )}
 
-              <div className="flex justify-center gap-2 my-2">
-                {otpValues.map((val, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (otpRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={1}
-                    value={val}
-                    onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    onPaste={handleOtpPaste}
-                    disabled={resetting || otpExpiryTime <= 0}
-                    autoComplete="one-time-code"
-                    className={`w-10 h-12 text-center text-xl font-bold font-mono rounded-xl border-2 transition-all focus:outline-none ${
-                      val 
-                        ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 shadow-sm' 
-                        : 'border-slate-200 bg-slate-50/50 text-slate-900 focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
-                    }`}
-                  />
-                ))}
-              </div>
+                {/* 6-Digit OTP Section with 5-Minute Countdown */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Verification Code *
+                    </label>
 
-              {/* Paste Code Button */}
-              <div className="flex justify-center mb-3">
+                    {/* Live 5-Minute Countdown Badge */}
+                    {otpExpiryTime > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+                        <Clock size={12} className="animate-pulse text-amber-600" />
+                        <span>Expires in <strong className="font-mono font-bold text-amber-800">{formatTime(otpExpiryTime)}</strong></span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono animate-pulse">
+                        <AlertTriangle size={12} />
+                        <span>Error Code: OTP_EXPIRED</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {otpExpiryTime <= 0 && (
+                    <div className="my-2 p-3 rounded-xl bg-rose-50 border border-rose-200/90 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-rose-700 text-xs font-bold font-mono">
+                        <AlertTriangle size={14} className="shrink-0" />
+                        <span>Error Code: OTP_EXPIRED</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={loading}
+                        className="text-xs font-bold text-rose-700 hover:text-rose-900 underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                        <span>Request New Code</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-center gap-1.5 sm:gap-2.5 my-2">
+                    {otpValues.map((val, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (otpRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={1}
+                        value={val}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        onPaste={handleOtpPaste}
+                        disabled={verifyingOtp || otpExpiryTime <= 0}
+                        autoComplete="one-time-code"
+                        className={`w-9 sm:w-11 md:w-12 h-12 sm:h-13 md:h-14 text-center text-lg sm:text-xl font-bold font-mono rounded-xl border-2 transition-all focus:outline-none ${
+                          val 
+                            ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 shadow-sm' 
+                            : 'border-slate-200 bg-slate-50/50 text-slate-900 focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Paste Code Button */}
+                  <div className="flex justify-center mb-3">
+                    <button
+                      type="button"
+                      onClick={handlePasteClipboard}
+                      disabled={verifyingOtp || otpExpiryTime <= 0}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 rounded-lg border border-indigo-200 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Clipboard size={13} />
+                      <span>Paste Code from Clipboard</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 mt-2 px-1">
+                    <span>Didn't receive code?</span>
+                    {resendCooldown > 0 ? (
+                      <span className="font-medium text-slate-400">
+                        Resend in {resendCooldown}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={loading}
+                        className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                      >
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  onClick={handlePasteClipboard}
-                  disabled={resetting || otpExpiryTime <= 0}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 rounded-lg border border-indigo-200 transition-all cursor-pointer disabled:opacity-50"
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || (otpExpiryTime <= 0 && !loading)}
+                  className={`w-full mt-2 py-3 px-4 rounded-xl font-semibold text-sm shadow-md active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer ${
+                    otpExpiryTime <= 0
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-600/20 disabled:opacity-60 disabled:cursor-not-allowed'
+                  }`}
                 >
-                  <Clipboard size={13} />
-                  <span>Paste Code from Clipboard</span>
+                  {verifyingOtp ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : otpExpiryTime <= 0 ? (
+                    <>
+                      <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                      <span>Error Code: OTP_EXPIRED — Request New Code</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      <span>Verify Code &amp; Continue</span>
+                    </>
+                  )}
                 </button>
               </div>
+            ) : (
+              /* STAGE 2: Set New Password (Unlocked after OTP verified) */
+              <form className="space-y-4" onSubmit={handleResetPassword}>
+                {/* Verified Account Indicator */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CheckCircle2 size={16} className="stroke-[2.5]" />
+                    </div>
+                    <div className="truncate">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded-md border border-emerald-300">
+                          Code Verified
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 truncate mt-0.5" title={lockedEmail}>
+                        {lockedEmail || identifier}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-500 mt-2 px-1">
-                <span>Didn't receive code?</span>
-                {resendCooldown > 0 ? (
-                  <span className="font-medium text-slate-400">
-                    Resend in {resendCooldown}s
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={loading}
-                    className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                {/* New Password */}
+                <div>
+                  <label 
+                    htmlFor="newPassword" 
+                    className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
                   >
-                    Resend Code
-                  </button>
-                )}
-              </div>
-            </div>
+                    New Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="newPassword"
+                      name="newPassword"
+                      type={showNewPassword ? 'text' : 'password'}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-base sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
 
-            {/* New Password */}
-            <div>
-              <label 
-                htmlFor="newPassword" 
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
-              >
-                New Password *
-              </label>
-              <div className="relative">
-                <input
-                  id="newPassword"
-                  name="newPassword"
-                  type={showNewPassword ? 'text' : 'password'}
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min 6 characters"
-                  className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
-                />
+                {/* Confirm New Password */}
+                <div>
+                  <label 
+                    htmlFor="confirmPassword" 
+                    className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
+                  >
+                    Confirm New Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-base sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  type="submit"
+                  disabled={resetting}
+                  className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 active:scale-[0.99] disabled:opacity-60 transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {resetting ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Updating Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound size={16} />
+                      <span>Reset Password</span>
+                    </>
+                  )}
                 </button>
-              </div>
-            </div>
-
-            {/* Confirm New Password */}
-            <div>
-              <label 
-                htmlFor="confirmPassword" 
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5"
-              >
-                Confirm New Password *
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
-                  className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type={otpExpiryTime <= 0 ? "button" : "submit"}
-              onClick={otpExpiryTime <= 0 ? handleResendOtp : undefined}
-              disabled={resetting || (isLocked && loading)}
-              className={`w-full mt-2 py-3 px-4 rounded-xl font-semibold text-sm shadow-md active:scale-[0.99] transition-all flex items-center justify-center gap-2 group cursor-pointer ${
-                otpExpiryTime <= 0
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-600/20 disabled:opacity-60 disabled:cursor-not-allowed'
-              }`}
-            >
-              {resetting ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  <span>Updating Password...</span>
-                </>
-              ) : otpExpiryTime <= 0 ? (
-                <>
-                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                  <span>Error Code: OTP_EXPIRED — Request New Code</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={16} />
-                  <span>Reset Password</span>
-                </>
-              )}
-            </button>
-          </form>
+              </form>
+            )}
+          </div>
         )}
 
         {/* Two-Tone Footer */}
-        <div className="mt-8 pt-4 pb-1 border-t border-slate-100 -mx-7 sm:-mx-9 -mb-7 sm:-mb-9 px-6 py-4 bg-slate-50/70 text-center flex items-center justify-center gap-1.5">
+        <div className="mt-8 pt-4 pb-1 border-t border-slate-100 -mx-5 sm:-mx-7 md:-mx-9 -mb-5 sm:-mb-7 md:-mb-9 px-4 sm:px-6 py-4 bg-slate-50/70 text-center flex items-center justify-center gap-1.5">
           <span className="text-xs text-slate-500 font-medium">
             Remember your credentials?
           </span>

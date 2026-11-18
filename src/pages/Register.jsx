@@ -530,14 +530,14 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-6 sm:py-10 px-3 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
       {/* Background Ambience */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-indigo-100/50 via-purple-50/30 to-transparent blur-3xl pointer-events-none -z-10" />
       <div className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Navigation Pill */}
-      <div className="w-full max-w-xl mb-4 flex justify-between items-center z-10">
+      <div className="w-full max-w-xl mb-4 flex justify-between items-center z-10 px-1">
         <Link
           to="/"
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white text-xs font-semibold text-slate-600 hover:text-indigo-600 shadow-sm border border-slate-200/80 hover:border-slate-300 transition-all group"
@@ -552,10 +552,10 @@ function Register() {
       </div>
 
       {/* Main Register Card */}
-      <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-6 sm:p-9 relative z-10 transition-all overflow-hidden">
+      <div className="w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-5 sm:p-7 md:p-9 relative z-10 transition-all overflow-hidden">
         {/* Step Progress Bar */}
         <div className="mb-8">
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 relative">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-4 relative">
             {/* Step 1 Pill */}
             <div className={`flex flex-col items-center text-center p-2 rounded-xl transition-all ${
               step === 1 ? 'bg-indigo-50/80 text-indigo-700' : step > 1 ? 'text-emerald-600' : 'text-slate-400'
@@ -811,7 +811,7 @@ function Register() {
                   </div>
                 )}
 
-                <div className="flex justify-center gap-2 sm:gap-3 my-3">
+                <div className="flex justify-center gap-1.5 sm:gap-2.5 my-3">
                   {otpValues.map((val, idx) => (
                     <input
                       key={idx}
@@ -826,7 +826,7 @@ function Register() {
                       onPaste={handleOtpPaste}
                       disabled={otpVerifying || otpExpiryTime <= 0}
                       autoComplete="one-time-code"
-                      className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold font-mono rounded-xl border-2 transition-all focus:outline-none ${
+                      className={`w-9 sm:w-11 md:w-12 h-12 sm:h-13 md:h-14 text-center text-lg sm:text-xl font-bold font-mono rounded-xl border-2 transition-all focus:outline-none ${
                         otpError 
                           ? 'border-rose-400 bg-rose-50/50 text-rose-700' 
                           : val 
@@ -1130,7 +1130,7 @@ function Register() {
 
         {/* Two-Tone Footer on Step 1 */}
         {step === 1 && (
-          <div className="mt-8 pt-4 pb-1 border-t border-slate-100 -mx-6 sm:-mx-9 -mb-6 sm:-mb-9 px-6 py-4 bg-slate-50/70 text-center flex items-center justify-center gap-1.5">
+          <div className="mt-8 pt-4 pb-1 border-t border-slate-100 -mx-5 sm:-mx-7 md:-mx-9 -mb-5 sm:-mb-7 md:-mb-9 px-4 sm:px-6 py-4 bg-slate-50/70 text-center flex items-center justify-center gap-1.5">
             <span className="text-xs text-slate-500 font-medium">
               Already have an account?
             </span>

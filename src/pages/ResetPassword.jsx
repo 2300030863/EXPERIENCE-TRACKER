@@ -69,14 +69,14 @@ function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-10 px-4 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 relative flex flex-col justify-center items-center py-6 sm:py-10 px-3 sm:px-6 lg:px-8 overflow-hidden selection:bg-indigo-500 selection:text-white">
       {/* Background Ambience */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-indigo-100/50 via-purple-50/30 to-transparent blur-3xl pointer-events-none -z-10" />
       <div className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Navigation Pill */}
-      <div className="w-full max-w-md mb-4 flex justify-between items-center z-10">
+      <div className="w-full max-w-md mb-4 flex justify-between items-center z-10 px-1">
         <Link
           to="/login"
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white text-xs font-semibold text-slate-600 hover:text-indigo-600 shadow-sm border border-slate-200/80 hover:border-slate-300 transition-all group"
@@ -91,7 +91,7 @@ function ResetPassword() {
       </div>
 
       {/* Main Card */}
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-7 sm:p-9 relative z-10 transition-all">
+      <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-5 sm:p-7 md:p-9 relative z-10 transition-all">
         {/* Brand Icon Badge */}
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/25 mx-auto mb-4">
           <KeyRound className="w-7 h-7 stroke-[2.2]" />
@@ -139,7 +139,7 @@ function ResetPassword() {
                 value={formData.newPassword}
                 onChange={handleChange}
                 placeholder="Min 6 characters"
-                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-base sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
               />
               <button
                 type="button"
@@ -168,7 +168,7 @@ function ResetPassword() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Re-enter new password"
-                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 text-base sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
               />
               <button
                 type="button"
