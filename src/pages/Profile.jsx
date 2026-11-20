@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { profileAPI, occupationAPI } from '../services/api'
-import { User, Mail, Lock, Save, Eye, EyeOff, Globe, Briefcase, Users, Shield, Sparkles, CheckCircle, KeyRound, AlertCircle } from 'lucide-react'
+import { User, Mail, Save, Globe, Briefcase, Users, Shield, Sparkles, CheckCircle, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { COUNTRIES } from '../utils/currency'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,16 +19,8 @@ function Profile() {
   })
   const [initialOccupationId, setInitialOccupationId] = useState(null)
   const [occupations, setOccupations] = useState([])
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -105,50 +97,6 @@ function Profile() {
     } catch (error) {
       console.error('Profile update error:', error)
       toast.error(error.response?.data?.message || 'Failed to update profile')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault()
-    
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('New passwords do not match')
-      return
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long')
-      return
-    }
-
-    setSaving(true)
-    try {
-      const requestData = {
-        newPassword: passwordForm.newPassword
-      }
-      
-      if (!profile.isOAuthUser || passwordForm.currentPassword) {
-        requestData.currentPassword = passwordForm.currentPassword
-      }
-      
-      await profileAPI.changePassword(requestData)
-      
-      if (profile.isOAuthUser) {
-        toast.success('Password set successfully! You can now login with email and password.')
-        setProfile({ ...profile, isOAuthUser: false })
-      } else {
-        toast.success('Password changed successfully')
-      }
-      
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      })
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to change password')
     } finally {
       setSaving(false)
     }
@@ -249,10 +197,8 @@ function Profile() {
           </div>
         </div>
 
-        {/* 2-Column Profile Configuration Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Personal Information & Settings */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200/80 space-y-6">
+        {/* Personal Information & Settings */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -409,129 +355,9 @@ function Profile() {
               </div>
             </form>
           </div>
-
-          {/* Right Column: Security & Password Management */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200/80 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                  <KeyRound size={18} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {profile.isOAuthUser ? 'Set Account Password' : 'Change Password'}
-                  </h2>
-                  <p className="text-xs text-slate-500">Security credentials & authentication</p>
-                </div>
-              </div>
-            </div>
-
-            {profile.isOAuthUser && (
-              <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900">
-                <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">Google OAuth Linked</span>
-                  <p className="text-blue-700 text-[11px] mt-0.5">
-                    Setting a password allows logging in with your email and password in addition to Google Sign-In.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              {!profile.isOAuthUser && (
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                    Current Password *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={passwordForm.currentPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                      className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-                      placeholder="Enter current password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  New Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? 'text' : 'password'}
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-                    placeholder="Minimum 6 characters"
-                    minLength="6"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                  >
-                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Confirm New Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full px-3.5 py-2.5 pr-10 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-                    placeholder="Repeat new password"
-                    minLength="6"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {saving ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Lock size={16} />
-                  )}
-                  <span>{profile.isOAuthUser ? 'Set Password' : 'Confirm Password Update'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       </div>
-    </div>
-  )
+    )
 }
 
 export default Profile
