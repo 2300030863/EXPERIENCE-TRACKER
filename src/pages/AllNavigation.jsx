@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { 
   Home, 
   CreditCard, 
+  Send,
   Repeat, 
   Tag, 
   Wallet, 
@@ -52,6 +53,16 @@ function AllNavigation() {
           bgLight: 'bg-emerald-50',
           textColor: 'text-emerald-600',
           borderColor: 'border-emerald-200'
+        },
+        {
+          title: 'Pay & Track',
+          desc: 'Send money to friends, family, shops & merchants via UPI or Cash',
+          href: '/app/pay-and-track',
+          icon: Send,
+          gradient: 'from-indigo-500 to-purple-600',
+          bgLight: 'bg-indigo-50',
+          textColor: 'text-indigo-600',
+          borderColor: 'border-indigo-200'
         },
         ...(!isGroupMember ? [
           {

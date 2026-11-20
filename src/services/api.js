@@ -1,9 +1,12 @@
 import axios from 'axios'
+import { Capacitor } from '@capacitor/core'
 
-// Base URL for backend API - use environment variable or production Render backend URL fallback
+// Base URL for backend API - prioritize VITE_API_URL, then native Capacitor / production HTTPS fallback
+const isNativePlatform = typeof window !== 'undefined' && Capacitor?.isNativePlatform?.();
+
 const API_BASE_URL = 
   import.meta.env.VITE_API_URL || 
-  (import.meta.env.PROD || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  (import.meta.env.PROD || isNativePlatform || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
     ? 'https://renderexpensivetracker.onrender.com' 
     : 'http://localhost:8086/expense-tracker-api');
 
@@ -151,6 +154,7 @@ export const profileAPI = {
   update: (data) => api.put('/profile', data),
   updateCountry: (data) => api.put('/profile', data),
   changePassword: (data) => api.post('/profile/change-password', data),
+  deleteAccount: () => api.delete('/profile'),
 }
 
 // Admin API
@@ -187,6 +191,24 @@ export const adminAPI = {
 
   // System stats
   getSystemStats: () => api.get('/admin/dashboard/stats'),
+}
+
+// Pay & Track API
+export const paymentAPI = {
+  getAll: (params) => api.get('/payments', { params }),
+  getById: (id) => api.get(`/payments/${id}`),
+  create: (data) => api.post('/payments', data),
+  initiateUpi: (data) => api.post('/payments/initiate-upi', data),
+  retry: (id, data) => api.post(`/payments/${id}/retry`, data),
+  updateStatus: (id, data) => api.patch(`/payments/${id}/status`, data),
+  getAttempts: (id) => api.get(`/payments/${id}/attempts`),
+  cancel: (id) => api.patch(`/payments/${id}/cancel`),
+  getRecipients: (search) => api.get('/payments/recipients/list', { params: { search } }),
+  getRecentRecipients: (limit = 8) => api.get('/payments/recipients/recent', { params: { limit } }),
+  getFavoriteRecipients: () => api.get('/payments/recipients/favorites'),
+  createRecipient: (data) => api.post('/payments/recipients', data),
+  toggleFavoriteRecipient: (id) => api.patch(`/payments/recipients/${id}/favorite`),
+  deleteRecipient: (id) => api.delete(`/payments/recipients/${id}`),
 }
 
 export default api

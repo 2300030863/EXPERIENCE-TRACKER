@@ -135,6 +135,28 @@
 
   /* Mobile bottom navigation spacing */
   .pb-mobile-nav {
-    padding-bottom: max(5rem, calc(4.25rem + env(safe-area-inset-bottom)));
+    padding-bottom: max(5.5rem, calc(4.75rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Device Safe Area Utilities */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Universal Responsive Modal Container */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto;
+  }
+  .modal-dialog {
+    @apply relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto animate-in fade-in zoom-in-95;
   }
 }

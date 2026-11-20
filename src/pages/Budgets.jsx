@@ -290,111 +290,132 @@ function Budgets() {
 
       {/* Budget Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative mx-auto p-5 sm:p-6 w-full max-w-md shadow-xl rounded-xl bg-white border border-slate-200 animate-fadeIn">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">
-              {editingBudget ? 'Edit Budget' : 'Add New Budget'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Budget Amount *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 5000"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="input-field"
-                />
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <Target size={18} />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingBudget ? 'Edit Budget' : 'Add New Budget'}
+                </h3>
               </div>
-              
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Recurrence Cycle *
-                </label>
-                <select
-                  required
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="YEARLY">Yearly</option>
-                  <option value="CUSTOM">Custom Range</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Category Scope
-                </label>
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="">All Categories (Total Spending)</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-200/60 transition-colors"
+                title="Close"
+              >
+                <Plus size={18} className="rotate-45" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Start Date *
+                    Budget Amount *
                   </label>
                   <input
-                    type="date"
+                    type="number"
+                    step="0.01"
                     required
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    placeholder="e.g. 5000"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                     className="input-field"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    End Date *
+                    Recurrence Cycle *
+                  </label>
+                  <select
+                    required
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="YEARLY">Yearly</option>
+                    <option value="CUSTOM">Custom Range</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Category Scope
+                  </label>
+                  <select
+                    value={formData.categoryId}
+                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">All Categories (Total Spending)</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      End Date *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Warning Alert Threshold ({formData.alertThreshold}%)
                   </label>
                   <input
-                    type="date"
-                    required
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="input-field"
+                    type="range"
+                    min="50"
+                    max="100"
+                    step="5"
+                    value={formData.alertThreshold}
+                    onChange={(e) => setFormData({ ...formData, alertThreshold: e.target.value })}
+                    className="w-full accent-slate-900"
                   />
+                  <div className="flex justify-between text-[11px] text-slate-400 mt-0.5">
+                    <span>50%</span>
+                    <span>Warn at {formData.alertThreshold}%</span>
+                    <span>100%</span>
+                  </div>
                 </div>
               </div>
               
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Warning Alert Threshold ({formData.alertThreshold}%)
-                </label>
-                <input
-                  type="range"
-                  min="50"
-                  max="100"
-                  step="5"
-                  value={formData.alertThreshold}
-                  onChange={(e) => setFormData({ ...formData, alertThreshold: e.target.value })}
-                  className="w-full accent-slate-900"
-                />
-                <div className="flex justify-between text-[11px] text-slate-400 mt-0.5">
-                  <span>50%</span>
-                  <span>Warn at {formData.alertThreshold}%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2.5 pt-2">
+              {/* Fixed Footer */}
+              <div className="p-4 pt-3 border-t border-slate-100 bg-slate-50/70 shrink-0 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}

@@ -82,7 +82,8 @@ function PrivacyPolicy() {
                 <li><strong>Account Credentials:</strong> Username, email address, password hash, and optional first/last names. If you register via Google OAuth 2.0, we receive your email and profile name as authorized by your Google consent screen.</li>
                 <li><strong>User Preferences:</strong> Country choice (used exclusively to format currency symbols like ₹, $, €, and £) and occupation selection (used exclusively to pre-populate relevant expense categories).</li>
                 <li><strong>Financial Records:</strong> Transaction descriptions, amounts, dates, categories, notes, account designations, recurring rules, and budget limits entered by you.</li>
-                <li><strong>System & Audit Logs:</strong> Timestamped login events and administrative audit records to detect unauthorized access and safeguard account security.</li>
+                <li><strong>Device Camera (QR Code Scanning Only):</strong> Camera permission is requested at runtime exclusively when you open the Scan &amp; Pay scanner to scan UPI QR codes. We do not capture, record, store, or transmit any video footage or camera images to any server.</li>
+                <li><strong>System &amp; Audit Logs:</strong> Timestamped login events and administrative audit records to detect unauthorized access and safeguard account security.</li>
               </ul>
             </section>
 
@@ -98,28 +99,43 @@ function PrivacyPolicy() {
             </section>
 
             <section className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">4. Data Security Measures</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">4. UPI Intent Payments &amp; Financial Security</h2>
+              <p>
+                Our Pay &amp; Track feature utilizes standard NPCI UPI Intent deep links (<code className="text-xs bg-slate-100 px-1 py-0.5 rounded">upi://pay</code>) to open compatible banking applications installed on your device (such as Google Pay, PhonePe, Paytm, or BHIM).
+              </p>
+              <ul className="list-disc pl-5 space-y-1.5 text-slate-600">
+                <li><strong>Zero Credential Access:</strong> We never collect, see, or store your UPI PIN, bank account credentials, debit card details, or banking passwords.</li>
+                <li><strong>Secure Execution:</strong> All PIN entry and financial debits take place exclusively inside your bank or NPCI-regulated payment app.</li>
+                <li><strong>Tracking Only:</strong> Our app serves strictly as an expense recording ledger to log your spending after you complete transactions.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">5. Data Security Measures</h2>
               <p>
                 Passwords are encrypted using industry-standard salted hashing algorithms (bcrypt). Sessions are managed using secure JSON Web Tokens (JWT). We do not store raw, unencrypted passwords. Application traffic is enforced over TLS/HTTPS encryption.
               </p>
             </section>
 
             <section className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">5. Third-Party Services & Google OAuth</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">6. Third-Party Services &amp; Google OAuth</h2>
               <p>
                 We do not share your financial information with third-party marketers. If you sign in via Google OAuth, authentication is handled directly by Google, and we only access basic identity scopes (email, profile) required for sign-in verification.
               </p>
             </section>
 
             <section className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">6. Data Retention & Your Rights</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">7. Data Retention &amp; In-App Account Deletion</h2>
               <p>
-                You retain complete ownership of your data. You may edit or delete individual transactions, categories, accounts, or budgets at any time. You can export your data to CSV or PDF from the Reports section. To request complete account deletion, you may contact support.
+                You retain complete ownership of your data. You may edit or delete individual transactions, categories, accounts, or budgets at any time. You can export your data to CSV or PDF from the Reports section.
+              </p>
+              <p>
+                <strong>Account Deletion:</strong> You can permanently delete your entire account and all associated financial records directly inside the app at any time under <strong>Profile &gt; Delete Account &amp; Data</strong>, or by emailing <a href="mailto:experiencetracker52@gmail.com" className="text-purple-600 underline">experiencetracker52@gmail.com</a>. Upon deletion, all personal data, accounts, budgets, and transactions are irreversibly purged.
               </p>
             </section>
 
             <section className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">7. Contact Us</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">8. Contact Us</h2>
               <p>
                 If you have questions about this Privacy Policy, your personal data, or security practices, please contact us at:
               </p>

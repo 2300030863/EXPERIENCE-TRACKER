@@ -18,7 +18,7 @@ function Layout() {
       <Sidebar isOpen={mobileMenuOpen} setIsOpen={setMobileMenuOpen} />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header />
+        <Header onOpenMobileMenu={() => setMobileMenuOpen(true)} />
         
         <main className="flex-1 overflow-y-auto pb-mobile-nav lg:pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -1,11 +1,11 @@
 import { useAuth } from '../contexts/AuthContext'
-import { LogOut, User, Shield, CreditCard } from 'lucide-react'
+import { LogOut, User, Shield, CreditCard, Menu } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './LanguageSwitcher'
 
-function Header() {
+function Header({ onOpenMobileMenu }) {
   const { user, logout } = useAuth()
   const [showDropdown, setShowDropdown] = useState(false)
   const navigate = useNavigate()
@@ -47,8 +47,21 @@ function Header() {
   const userInitial = user?.firstName?.[0] || user?.username?.[0] || 'U'
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
-      <div className="flex items-center gap-3 min-w-0">
+    <header className="h-16 bg-white border-b border-slate-200/90 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        {/* Mobile Hamburger Drawer Toggle */}
+        {onOpenMobileMenu && (
+          <button
+            type="button"
+            onClick={onOpenMobileMenu}
+            className="lg:hidden p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+            aria-label="Open navigation menu"
+            title="Open Menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+
         {/* Logo on Left for small screens where sidebar is hidden */}
         <Link
           to="/app/dashboard"

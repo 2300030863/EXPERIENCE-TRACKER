@@ -7,6 +7,7 @@ import {
   Target, 
   BarChart3,
   Repeat,
+  Send,
   User,
   X,
   Shield,
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 const userNavItems = [
   { key: 'nav.dashboard',    href: '/app/dashboard',             icon: Home },
   { key: 'nav.transactions', href: '/app/transactions',           icon: CreditCard },
+  { key: 'nav.payAndTrack',   href: '/app/pay-and-track',         icon: Send, label: 'Pay & Track' },
   { key: 'nav.recurring',    href: '/app/recurring-transactions', icon: Repeat },
   { key: 'nav.categories',   href: '/app/categories',             icon: Tag },
   { key: 'nav.accounts',     href: '/app/accounts',               icon: Wallet },
@@ -143,7 +145,7 @@ function Sidebar({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) {
                     }
                   >
                     <Icon size={17} className="shrink-0" />
-                    <span className="truncate">{t(item.key)}</span>
+                    <span className="truncate">{t(item.key, item.label || item.key)}</span>
                   </NavLink>
                 )
               })}

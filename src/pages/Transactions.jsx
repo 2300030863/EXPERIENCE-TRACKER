@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { transactionAPI, categoryAPI, accountAPI } from '../services/api'
-import { Plus, Edit, Trash2, Filter, Search, X, ArrowDownRight, ArrowUpRight, Wallet, Tag, Calendar, Sparkles, TrendingUp, TrendingDown, DollarSign, XCircle, FileText, CheckCircle, RotateCcw } from 'lucide-react'
+import { Plus, Edit, Trash2, Filter, Search, X, ArrowDownRight, ArrowUpRight, Wallet, Tag, Calendar, Sparkles, TrendingUp, TrendingDown, DollarSign, XCircle, FileText, CheckCircle, RotateCcw, Send } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -222,6 +223,13 @@ function Transactions() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <Link
+              to="/app/pay-and-track"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-50 text-indigo-700 font-semibold text-xs sm:text-sm transition-all active:scale-95 shadow-2xs"
+            >
+              <Send size={15} />
+              <span>⚡ Pay & Track</span>
+            </Link>
             <button
               onClick={() => {
                 resetForm()
@@ -421,7 +429,18 @@ function Transactions() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
-                            <div className="font-semibold text-slate-900 leading-tight">{t.description}</div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-slate-900 leading-tight">{t.description}</span>
+                              {t.notes?.includes('UPI to:') || t.description?.startsWith('UPI payment') ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  ⚡ UPI
+                                </span>
+                              ) : t.notes?.includes('Cash Paid to:') || t.description?.startsWith('Cash payment') ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  💵 Cash
+                                </span>
+                              ) : null}
+                            </div>
                             {t.notes && (
                               <div className="text-xs text-slate-400 truncate max-w-xs mt-0.5">{t.notes}</div>
                             )}
@@ -494,7 +513,18 @@ function Transactions() {
                     <div key={t.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="font-bold text-slate-900 text-sm leading-tight">{t.description}</div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm leading-tight">{t.description}</span>
+                            {t.notes?.includes('UPI to:') || t.description?.startsWith('UPI payment') ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                ⚡ UPI
+                              </span>
+                            ) : t.notes?.includes('Cash Paid to:') || t.description?.startsWith('Cash payment') ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                💵 Cash
+                              </span>
+                            ) : null}
+                          </div>
                           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
                             <Calendar size={11} className="text-slate-400" />
                             <span>{format(new Date(t.transactionDate), 'MMM dd, yyyy')}</span>

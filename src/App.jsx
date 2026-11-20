@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
+import NetworkStatus from './components/NetworkStatus'
 
 // Lazy-loaded route components for instant mobile and desktop responsiveness
 const Welcome = lazy(() => import('./pages/Welcome'))
@@ -15,6 +16,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Transactions = lazy(() => import('./pages/Transactions'))
+const PayAndTrack = lazy(() => import('./pages/PayAndTrack'))
 const RecurringTransactions = lazy(() => import('./pages/RecurringTransactions'))
 const Categories = lazy(() => import('./pages/Categories'))
 const Accounts = lazy(() => import('./pages/Accounts'))
@@ -98,12 +100,47 @@ function App() {
     document.documentElement.lang = i18n.language
   }, [i18n.language])
 
+  // Capacitor Native Mobile Lifecycle (Splash Screen, Status Bar, Back Button)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    import('@capacitor/core').then(({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        // Hide Splash Screen once React app is mounted
+        import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+          SplashScreen.hide().catch(() => {})
+        })
+
+        // Configure Status Bar style
+        import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+          StatusBar.setStyle({ style: Style.Dark }).catch(() => {})
+          StatusBar.setBackgroundColor({ color: '#0f172a' }).catch(() => {})
+        })
+
+        // Hardware back button support for Android
+        import('@capacitor/app').then(({ App: CapApp }) => {
+          CapApp.addListener('backButton', ({ canGoBack }) => {
+            const currentPath = window.location.pathname
+            if (currentPath === '/app/dashboard' || currentPath === '/' || currentPath === '/login') {
+              CapApp.exitApp()
+            } else if (canGoBack || window.history.length > 1) {
+              window.history.back()
+            } else {
+              CapApp.exitApp()
+            }
+          })
+        })
+      }
+    }).catch(() => {})
+  }, [])
+
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router basename="/" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <SpaPathRestorer />
           <ErrorBoundary>
+            <NetworkStatus />
             <div className="min-h-screen bg-gray-50 text-gray-900 antialiased selection:bg-purple-500 selection:text-white">
               <Suspense fallback={<PageLoader />}>
                 <Routes>
@@ -135,6 +172,7 @@ function App() {
                   {/* Legacy URL redirects to /app/* paths to prevent white screen on browser back/bookmarks */}
                   <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
                   <Route path="/transactions" element={<Navigate to="/app/transactions" replace />} />
+                  <Route path="/pay-and-track" element={<Navigate to="/app/pay-and-track" replace />} />
                   <Route path="/recurring-transactions" element={<Navigate to="/app/recurring-transactions" replace />} />
                   <Route path="/categories" element={<Navigate to="/app/categories" replace />} />
                   <Route path="/accounts" element={<Navigate to="/app/accounts" replace />} />
@@ -153,6 +191,7 @@ function App() {
                     <Route index element={<Navigate to="/app/dashboard" replace />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="transactions" element={<Transactions />} />
+                    <Route path="pay-and-track" element={<PayAndTrack />} />
                     <Route path="recurring-transactions" element={<RecurringTransactions />} />
                     <Route path="categories" element={<Categories />} />
                     <Route path="accounts" element={<Accounts />} />

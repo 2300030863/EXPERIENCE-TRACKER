@@ -253,73 +253,94 @@ function Accounts() {
 
       {/* Account Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative mx-auto p-5 sm:p-6 w-full max-w-md shadow-xl rounded-xl bg-white border border-slate-200 animate-fadeIn">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">
-              {editingAccount ? 'Edit Account' : 'Add New Account'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Account Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. HDFC Salary Account, Personal Amex"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input-field"
-                />
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center">
+                  <Wallet size={18} />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingAccount ? 'Edit Account' : 'Add New Account'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-200/60 transition-colors"
+                title="Close"
+              >
+                <Plus size={18} className="rotate-45" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Account Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. HDFC Salary Account, Personal Amex"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="BANK">Bank Account</option>
+                    <option value="CREDIT_CARD">Credit Card</option>
+                    <option value="WALLET">Digital Wallet</option>
+                    <option value="SAVINGS">Savings Account</option>
+                    <option value="INVESTMENT">Investment Account</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Initial Balance
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.balance}
+                    onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Description / Notes
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="input-field"
+                    rows="2"
+                    placeholder="Optional details or account purpose"
+                  />
+                </div>
               </div>
               
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Type *
-                </label>
-                <select
-                  required
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="BANK">Bank Account</option>
-                  <option value="CREDIT_CARD">Credit Card</option>
-                  <option value="WALLET">Digital Wallet</option>
-                  <option value="SAVINGS">Savings Account</option>
-                  <option value="INVESTMENT">Investment Account</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Initial Balance
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.balance}
-                  onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Description / Notes
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="input-field"
-                  rows="2"
-                  placeholder="Optional details or account purpose"
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2.5 pt-2">
+              {/* Fixed Footer */}
+              <div className="p-4 pt-3 border-t border-slate-100 bg-slate-50/70 shrink-0 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}

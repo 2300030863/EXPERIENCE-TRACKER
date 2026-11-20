@@ -249,61 +249,82 @@ function Categories() {
 
       {/* Category Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative mx-auto p-5 sm:p-6 w-full max-w-md shadow-xl rounded-xl bg-white border border-slate-200 animate-fadeIn">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">
-              {editingCategory ? 'Edit Category' : 'Add New Category'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Category Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Health Insurance, Freelance Tools"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input-field"
-                />
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
+                  <Tag size={18} />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h3>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-200/60 transition-colors"
+                title="Close"
+              >
+                <Plus size={18} className="rotate-45" />
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  placeholder="Optional brief description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="input-field"
-                />
-              </div>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Health Insurance, Freelance Tools"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
-                  Category Color
-                </label>
-                <div className="grid grid-cols-6 gap-2">
-                  {predefinedColors.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, color })}
-                      className="h-8 rounded-lg transition-transform active:scale-95 flex items-center justify-center shadow-xs"
-                      style={{ backgroundColor: color }}
-                    >
-                      {formData.color === color && (
-                        <Check size={16} className="text-white drop-shadow-xs" />
-                      )}
-                    </button>
-                  ))}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Optional brief description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                    Category Color
+                  </label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {predefinedColors.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color })}
+                        className="h-8 rounded-lg transition-transform active:scale-95 flex items-center justify-center shadow-xs"
+                        style={{ backgroundColor: color }}
+                      >
+                        {formData.color === color && (
+                          <Check size={16} className="text-white drop-shadow-xs" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-3">
+              {/* Fixed Footer */}
+              <div className="p-4 pt-3 border-t border-slate-100 bg-slate-50/70 shrink-0 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}

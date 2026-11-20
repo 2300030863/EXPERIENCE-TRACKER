@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { analyticsAPI } from '../services/api'
-import { DollarSign, TrendingUp, TrendingDown, Shield, User as UserIcon, Crown, Calendar, Plus, Wallet, PieChart as PieIcon, BarChart3, Repeat, FileText, ChevronRight, Sparkles, Mail, ExternalLink, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, Shield, User as UserIcon, Crown, Calendar, Plus, Wallet, PieChart as PieIcon, BarChart3, Repeat, FileText, ChevronRight, Sparkles, Mail, ExternalLink, ArrowUpRight, ArrowDownRight, Send } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -195,6 +195,13 @@ function Dashboard() {
                   <span>Admin Panel</span>
                 </button>
               )}
+              <button
+                onClick={() => navigate('/app/pay-and-track')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-50 text-indigo-700 font-semibold text-xs sm:text-sm transition-all active:scale-95 shadow-2xs"
+              >
+                <Send size={14} />
+                <span>⚡ Pay & Track</span>
+              </button>
               <button
                 onClick={() => navigate('/app/transactions')}
                 className="btn-primary text-xs sm:text-sm"
