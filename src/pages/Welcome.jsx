@@ -125,108 +125,103 @@ function Welcome() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white">
       {/* Top Announcement Bar */}
-      <div className="bg-slate-900 text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-3 sm:px-4 text-center font-medium leading-snug">
-        <span>✨ Welcome to Expense Tracker — Complete Personal & Team Financial Intelligence Platform</span>
+      <div className="bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-1.5 px-4 text-center font-medium">
+        <span>Expense Tracker — Personal finance management and real-time cash flow tracking.</span>
       </div>
 
       {/* Main Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2 sm:gap-3 flex-shrink-0 group">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
-              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs">
+              <CreditCard className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="text-base sm:text-2xl font-black tracking-tight text-slate-900 leading-tight">
-                Expense<span className="text-purple-600">Tracker</span>
-              </span>
-              <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-slate-400 -mt-1">
-                Financial Manager
+              <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
+                Expense<span className="text-slate-600">Tracker</span>
               </span>
             </div>
           </Link>
 
           {/* Nav Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-            <a href="#about" className="hover:text-purple-600 transition-colors">About</a>
-            <a href="#features" className="hover:text-purple-600 transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-purple-600 transition-colors">How It Works</a>
-            <a href="#audience" className="hover:text-purple-600 transition-colors">Who It's For</a>
-            <Link to="/privacy-policy" className="hover:text-purple-600 transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-purple-600 transition-colors">Terms of Service</Link>
+          <nav className="hidden md:flex items-center gap-6 text-xs sm:text-sm font-medium text-slate-600">
+            <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How It Works</a>
+            <a href="#audience" className="hover:text-slate-900 transition-colors">Who It's For</a>
+            <Link to="/privacy-policy" className="hover:text-slate-900 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <button
               onClick={() => navigate('/login')}
-              className="px-2.5 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-700 hover:text-purple-700 rounded-lg sm:rounded-xl hover:bg-slate-100 transition-colors whitespace-nowrap"
+              className="btn-secondary text-xs"
             >
               Sign In
             </button>
             <button
               onClick={() => navigate('/register')}
-              className="px-3 sm:px-6 py-1.5 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 rounded-lg sm:rounded-xl shadow-md shadow-purple-600/30 transition-all flex items-center gap-1 sm:gap-1.5 whitespace-nowrap"
+              className="btn-primary text-xs"
             >
               <span>Get Started</span>
-              <ArrowRight size={14} className="hidden sm:inline-block" />
+              <ArrowRight size={14} className="ml-1" />
             </button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-white via-slate-50 to-slate-100 border-b border-slate-200 py-16 sm:py-24">
+      <section className="bg-white border-b border-slate-200 py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             {/* Left Column */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
-                <Sparkles size={14} className="text-purple-600" />
-                <span>Next-Generation Expense Intelligence</span>
+            <div className="lg:col-span-7 space-y-5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
+                <span>Personal & Family Finance</span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-                Take complete control of your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600">income, spending, & budgets</span>.
+              <h1 className="text-3xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-tight">
+                Take control of your income, expenses, and monthly budgets.
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
-                ExpenseTracker is an all-in-one financial management platform designed to help you track daily expenses, manage multi-bank accounts, automate recurring subscriptions, set budget thresholds, and generate beautiful visual reports.
+                A clean, reliable expense tracker to log transactions, manage multiple accounts, automate recurring subscriptions, and understand your cash flow with clear visual reports.
               </p>
 
               {/* Call to action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => navigate('/register')}
-                  className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-base rounded-2xl shadow-lg shadow-purple-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="btn-primary py-3 px-6 text-sm"
                 >
-                  <span>Create Free Account</span>
-                  <ArrowRight size={18} />
+                  <span>Create Account</span>
+                  <ArrowRight size={16} className="ml-1.5" />
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-8 py-4 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 font-bold text-base rounded-2xl shadow-sm hover:border-slate-300 transition-all text-center"
+                  className="btn-secondary py-3 px-6 text-sm"
                 >
-                  Existing User Sign In
+                  Sign In to Existing Account
                 </button>
               </div>
 
               {/* Trust Indicators */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-6 border-t border-slate-200 max-w-lg">
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-100 max-w-md text-xs">
                 <div>
-                  <div className="text-xl sm:text-3xl font-black text-slate-900">100%</div>
-                  <div className="text-[11px] sm:text-xs font-semibold text-slate-500">Free to Use</div>
+                  <div className="font-bold text-slate-900 text-base">Multi-Currency</div>
+                  <div className="text-slate-500">₹, $, €, £ supported</div>
                 </div>
                 <div>
-                  <div className="text-xl sm:text-3xl font-black text-slate-900">256-Bit</div>
-                  <div className="text-[11px] sm:text-xs font-semibold text-slate-500">Encrypted Data</div>
+                  <div className="font-bold text-slate-900 text-base">Secure TLS</div>
+                  <div className="text-slate-500">Encrypted in transit</div>
                 </div>
                 <div>
-                  <div className="text-xl sm:text-3xl font-black text-slate-900">Global</div>
-                  <div className="text-[11px] sm:text-xs font-semibold text-slate-500">Currency Support</div>
+                  <div className="font-bold text-slate-900 text-base">Data Export</div>
+                  <div className="text-slate-500">PDF & CSV downloads</div>
                 </div>
               </div>
             </div>

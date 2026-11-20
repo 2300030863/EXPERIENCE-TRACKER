@@ -393,37 +393,32 @@ function Reports() {
   const overBudgetCount = budgetList.filter(b => b.isOverBudget).length
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-600 selection:text-white pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
+    <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles size={14} className="text-indigo-600" />
-              <span>Financial Intelligence & Analytics</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
-              Reports & Analytics
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Reports & Statements
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Comprehensive spending trends, category distributions, budget compliance, and exportable statements.
+            <p className="text-sm text-slate-500 mt-0.5">
+              Comprehensive spending trends, category distributions, and downloadable statements.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
             <button
               onClick={exportToCSV}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-bold shadow-xs transition-all active:scale-95"
+              className="btn-secondary"
             >
-              <Download size={16} className="text-slate-500" />
+              <Download size={15} className="mr-1.5 text-slate-500" />
               <span>Export CSV</span>
             </button>
             <button
               onClick={exportToPDF}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm shadow-indigo-600/20 transition-all active:scale-95"
+              className="btn-primary"
             >
-              <FileText size={16} />
-              <span>Export PDF Statement</span>
+              <FileText size={15} className="mr-1.5" />
+              <span>Download PDF</span>
             </button>
           </div>
         </div>
@@ -791,7 +786,6 @@ function Reports() {
           )}
         </div>
       </div>
-    </div>
   )
 }
 

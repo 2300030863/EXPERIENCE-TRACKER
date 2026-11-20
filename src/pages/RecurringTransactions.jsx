@@ -295,19 +295,14 @@ function RecurringTransactions() {
   }
 
   return (
-    <div className="text-slate-900 selection:bg-purple-600 selection:text-white pb-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles size={14} className="text-purple-600" />
-              <span>Automated Financial Schedules</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Recurring Transactions
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 max-w-2xl">
+            <p className="text-sm text-slate-500 mt-0.5 max-w-2xl">
               Automate repeat expenses and scheduled income like bills, rent, subscriptions, and salaries.
             </p>
           </div>
@@ -315,10 +310,10 @@ function RecurringTransactions() {
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => setShowHelp(!showHelp)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold transition-all shadow-xs"
+              className="btn-secondary"
             >
-              <Info size={16} className="text-purple-600" />
-              <span>{showHelp ? 'Hide Tips' : 'Rules & Tips'}</span>
+              <Info size={15} className="mr-1.5 text-slate-500" />
+              <span>{showHelp ? 'Hide Guide' : 'Schedules Guide'}</span>
             </button>
             <button
               onClick={() => {
@@ -326,9 +321,9 @@ function RecurringTransactions() {
                 setEditingTransaction(null)
                 setShowModal(true)
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm shadow-purple-600/20 active:scale-95 transition-all"
+              className="btn-primary"
             >
-              <Plus size={18} />
+              <Plus size={16} className="mr-1.5" />
               <span>New Schedule</span>
             </button>
           </div>
@@ -336,31 +331,31 @@ function RecurringTransactions() {
 
         {/* Tips / Rules Card */}
         {showHelp && (
-          <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm animate-in fade-in duration-200 space-y-3">
+          <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Info size={16} className="text-purple-600" />
-                <span>How Recurring Execution Cycles Work</span>
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <Info size={16} className="text-slate-600" />
+                <span>How Recurring Cycles Work</span>
               </h3>
               <button onClick={() => setShowHelp(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={16} />
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100">
-                <strong className="text-purple-900 block font-bold mb-1">Daily</strong>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <strong className="text-slate-900 block font-semibold mb-1">Daily</strong>
                 <p className="text-slate-600">Runs every 24 hours. Ideal for daily commuting or coffee allowances.</p>
               </div>
-              <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <strong className="text-indigo-900 block font-bold mb-1">Weekly</strong>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <strong className="text-slate-900 block font-semibold mb-1">Weekly</strong>
                 <p className="text-slate-600">Runs every 7 days. Useful for groceries, fuel, and weekly stipends.</p>
               </div>
-              <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                <strong className="text-blue-900 block font-bold mb-1">Monthly</strong>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <strong className="text-slate-900 block font-semibold mb-1">Monthly</strong>
                 <p className="text-slate-600">Runs monthly. Perfect for rent, Netflix, gym memberships, and salaries.</p>
               </div>
-              <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                <strong className="text-emerald-900 block font-bold mb-1">Yearly</strong>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <strong className="text-slate-900 block font-semibold mb-1">Yearly</strong>
                 <p className="text-slate-600">Runs annually. Best for insurance premiums, SaaS licenses, and taxes.</p>
               </div>
             </div>
@@ -369,42 +364,42 @@ function RecurringTransactions() {
 
         {/* 3 Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Schedules</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
-                {activeCount} <span className="text-xs font-medium text-slate-400">/ {recurringTransactions.length} total</span>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Schedules</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums mt-1">
+                {activeCount} <span className="text-xs font-normal text-slate-400">/ {recurringTransactions.length} total</span>
               </h3>
-              <span className="text-[11px] font-medium text-purple-600 mt-1 inline-block">Automated Triggers</span>
+              <span className="text-xs text-slate-500 mt-1 inline-block font-medium">Automatic execution active</span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-              <Repeat size={24} />
+            <div className="w-11 h-11 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+              <Repeat size={22} />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Monthly Est. Outflow</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-rose-600 mt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly Est. Outflow</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-rose-700 tabular-nums mt-1">
                 {formatCurrency(totalMonthlyExpense)}
               </h3>
-              <span className="text-[11px] font-medium text-rose-600 mt-1 inline-block">Automated Expenses</span>
+              <span className="text-xs text-rose-700 mt-1 inline-block font-medium">Estimated monthly bills</span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              <TrendingDown size={24} />
+            <div className="w-11 h-11 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+              <TrendingDown size={22} />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Monthly Est. Inflow</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly Est. Inflow</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-emerald-700 tabular-nums mt-1">
                 {formatCurrency(totalMonthlyIncome)}
               </h3>
-              <span className="text-[11px] font-medium text-emerald-600 mt-1 inline-block">Recurring Revenue</span>
+              <span className="text-xs text-emerald-700 mt-1 inline-block font-medium">Estimated monthly income</span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <TrendingUp size={24} />
+            <div className="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <TrendingUp size={22} />
             </div>
           </div>
         </div>
@@ -994,7 +989,6 @@ function RecurringTransactions() {
         </div>
       )}
       </div>
-    </div>
   )
 }
 

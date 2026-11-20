@@ -8,7 +8,6 @@ import {
   BarChart3,
   Repeat,
   User,
-  Menu,
   X,
   Shield,
   Crown,
@@ -51,7 +50,7 @@ function Sidebar({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) {
   // Build navigation based on role
   let navigation = [...userNavItems]
   
-  // Remove budgets and recurring transactions for group members only (admins and owners can see all)
+  // Remove budgets and recurring transactions for group members only
   if (isGroupMember && !isAdmin && !isOwner) {
     navigation = navigation.filter(item => item.key !== 'nav.budgets' && item.key !== 'nav.recurring')
   }
@@ -62,338 +61,112 @@ function Sidebar({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) {
     navigation = [...adminNavItems, ...navigation]
   }
 
+  const userInitial = user?.firstName?.[0] || user?.username?.[0] || 'U'
+
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile Backdrop */}
       {isOpen && (
         <div 
-          className="sidebar-overlay"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`modern-sidebar ${isOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">
-              <CreditCard size={24} />
+      {/* Sidebar Container */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/90 flex flex-col transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Sidebar Header / Logo */}
+        <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-xs">
+              <CreditCard size={17} />
             </div>
-            <h1 className="sidebar-title">Expense Tracker</h1>
+            <div>
+              <span className="font-bold text-sm tracking-tight text-slate-900 block leading-tight">
+                Expense Tracker
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 block tracking-wide uppercase">
+                Finance Workspace
+              </span>
+            </div>
           </div>
           <button 
-            className="sidebar-close-btn"
+            className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
             onClick={() => setIsOpen(false)}
             aria-label="Close menu"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
-        
-        <nav className="sidebar-nav">
-          {/* Mobile User Profile Summary in Drawer */}
-          <div className="lg:hidden mb-4 p-3.5 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 rounded-2xl border border-purple-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
-                {user?.firstName?.[0] || user?.username?.[0] || 'U'}
+
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          {/* Mobile Profile Summary */}
+          <div className="lg:hidden p-3 rounded-lg bg-slate-50 border border-slate-200/80 mb-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center text-xs font-bold uppercase shadow-xs">
+                {userInitial}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-sm text-gray-800 truncate">
-                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.username}
+                <div className="text-xs font-semibold text-slate-900 truncate">
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username}
                 </div>
-                <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+                <div className="text-[11px] text-slate-500 truncate">{user?.email}</div>
               </div>
             </div>
-            <div className="mt-2.5 pt-2 border-t border-purple-200/40 flex items-center justify-between text-xs">
-              <span className="font-semibold text-purple-700">
-                {isOwner ? '👑 Owner' : isAdmin ? '🛡️ Admin' : '👤 User'}
+          </div>
+
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <span>Navigation</span>
+              <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-medium">
+                {navigation.length}
               </span>
-              <span className="text-[11px] text-gray-500 font-medium">All Navigation</span>
             </div>
-          </div>
 
-          <div className="sidebar-section-header">
-            <span>Menu Options</span>
-            <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">{navigation.length}</span>
-          </div>
-
-          <ul className="sidebar-menu">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              return (
-                <li key={item.key}>
+            <nav className="space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon
+                return (
                   <NavLink
+                    key={item.key}
                     to={item.href}
                     onClick={() => setIsOpen(false)}
                     className={({ isActive }) =>
-                      `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }`
                     }
                   >
-                    <Icon size={20} className="sidebar-icon" />
-                    <span>{t(item.key)}</span>
+                    <Icon size={17} className="shrink-0" />
+                    <span className="truncate">{t(item.key)}</span>
                   </NavLink>
-                </li>
-              )
-            })}
-          </ul>
-
-          {/* Mobile Drawer Quick Actions */}
-          <div className="lg:hidden mt-6 pt-4 pb-6 border-t border-gray-100 space-y-2">
-            <button
-              onClick={() => {
-                setIsOpen(false)
-                logout()
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 text-xs font-semibold transition-all border border-red-200/60"
-            >
-              <LogOut size={16} />
-              <span>{t('header.signOut') || 'Sign Out'}</span>
-            </button>
+                )
+              })}
+            </nav>
           </div>
-        </nav>
-      </div>
+        </div>
 
-      <style>{`
-        .sidebar-overlay {
-          display: block;
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.45);
-          backdrop-filter: blur(8px);
-          z-index: 55;
-          animation: overlayFadeIn 0.3s ease-out;
-        }
-
-        @media (min-width: 1024px) {
-          .sidebar-overlay {
-            display: none;
-          }
-        }
-
-        @keyframes overlayFadeIn {
-          from { opacity: 0; backdrop-filter: blur(0px); }
-          to { opacity: 1; backdrop-filter: blur(8px); }
-        }
-
-        .modern-sidebar {
-          position: fixed;
-          inset-y: 0;
-          left: 0;
-          z-index: 60;
-          width: 18rem;
-          max-width: 86vw;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(24px) saturate(180%);
-          box-shadow: 10px 0 40px rgba(0, 0, 0, 0.12);
-          border-right: 1px solid rgba(255, 255, 255, 0.8);
-          transform: translateX(-100%);
-          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .sidebar-section-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: 0.72rem;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #94a3b8;
-          font-weight: 700;
-          margin-bottom: 0.6rem;
-          padding: 0 0.5rem;
-        }
-
-        .sidebar-open {
-          transform: translateX(0);
-        }
-
-        @media (min-width: 1024px) {
-          .modern-sidebar {
-            position: static;
-            transform: translateX(0);
-            width: 16rem;
-            background: rgba(255, 255, 255, 0.6);
-            border-right: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 1px 0 0 rgba(0, 0, 0, 0.03);
-          }
-        }
-
-        .sidebar-header {
-          height: calc(5rem + env(safe-area-inset-top, 0px));
-          padding-top: env(safe-area-inset-top, 0px);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding-left: 1.25rem;
-          padding-right: 1rem;
-          background: transparent;
-          position: relative;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .sidebar-close-btn {
-          background: rgba(0, 0, 0, 0.04);
-          border: none;
-          color: #64748b;
-          cursor: pointer;
-          padding: 0.4rem;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10;
-          transition: all 0.3s ease;
-        }
-
-        .sidebar-close-btn:hover {
-          background: rgba(239, 68, 68, 0.1);
-          color: #ef4444;
-          transform: scale(1.1) rotate(90deg);
-        }
-
-        @media (min-width: 1024px) {
-          .sidebar-close-btn {
-            display: none;
-          }
-        }
-
-        .sidebar-logo {
-          display: flex;
-          align-items: center;
-          gap: 0.875rem;
-          position: relative;
-          z-index: 1;
-        }
-
-        .sidebar-logo-icon {
-          width: 2.75rem;
-          height: 2.75rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-          position: relative;
-        }
-        
-        .sidebar-logo-icon::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
-        }
-
-        .sidebar-title {
-          font-size: 1.2rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          letter-spacing: -0.02em;
-        }
-
-        .sidebar-nav {
-          margin-top: 1rem;
-          padding: 0 1rem;
-          height: calc(100% - 5rem - env(safe-area-inset-top, 0px));
-          overflow-y: auto;
-          padding-bottom: env(safe-area-inset-bottom, 1.5rem);
-        }
-        
-        .sidebar-nav::-webkit-scrollbar {
-          width: 4px;
-        }
-        
-        .sidebar-nav::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        
-        .sidebar-nav::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.1);
-          border-radius: 10px;
-        }
-
-        .sidebar-menu {
-          display: flex;
-          flex-direction: column;
-          gap: 0.35rem;
-          padding: 0;
-          margin: 0;
-          list-style: none;
-        }
-
-        .sidebar-link {
-          display: flex;
-          align-items: center;
-          padding: 0.85rem 1.15rem;
-          font-size: 0.95rem;
-          font-weight: 600;
-          border-radius: 12px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #64748b;
-          text-decoration: none;
-          position: relative;
-          background: transparent;
-        }
-
-        .sidebar-link::before {
-          content: '';
-          position: absolute;
-          left: -0.5rem;
-          top: 15%;
-          height: 70%;
-          width: 4px;
-          background: linear-gradient(to bottom, #667eea, #764ba2);
-          border-radius: 4px;
-          opacity: 0;
-          transform: scaleY(0);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .sidebar-link:hover {
-          background: rgba(255, 255, 255, 0.8);
-          color: #334155;
-          transform: translateX(4px);
-        }
-
-        .sidebar-link-active {
-          background: #ffffff;
-          color: #667eea;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
-        }
-
-        .sidebar-link-active::before {
-          opacity: 1;
-          transform: scaleY(1);
-          left: 0;
-        }
-
-        .sidebar-icon {
-          margin-right: 0.875rem;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          color: inherit;
-          opacity: 0.8;
-        }
-
-        .sidebar-link:hover .sidebar-icon {
-          transform: scale(1.15);
-          color: #667eea;
-          opacity: 1;
-        }
-        
-        .sidebar-link-active .sidebar-icon {
-          color: #667eea;
-          opacity: 1;
-        }
-      `}</style>
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-100 shrink-0">
+          <button
+            onClick={() => {
+              setIsOpen(false)
+              logout()
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+          >
+            <LogOut size={16} />
+            <span>{t('header.signOut') || 'Sign Out'}</span>
+          </button>
+        </div>
+      </aside>
     </>
   )
 }
 
 export default Sidebar
-
-
-

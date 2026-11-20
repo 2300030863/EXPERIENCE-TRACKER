@@ -1,5 +1,5 @@
 import { useAuth } from '../contexts/AuthContext'
-import { LogOut, User, Shield, Sparkles, CreditCard } from 'lucide-react'
+import { LogOut, User, Shield, CreditCard } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -13,6 +13,7 @@ function Header() {
   const { t } = useTranslation()
   
   const isAdmin = user?.role === 'ROLE_ADMIN'
+  const isOwner = user?.role === 'ROLE_OWNER'
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -34,330 +35,97 @@ function Header() {
   const handleLogout = () => {
     setShowDropdown(false)
     logout()
-    // Navigate after a small delay to ensure logout completes
     setTimeout(() => {
       navigate('/', { replace: true })
     }, 100)
   }
 
   const toggleDropdown = () => {
-    console.log('Dropdown clicked, current state:', showDropdown)
     setShowDropdown(!showDropdown)
   }
 
-  return (
-    <header className="header-root">
-      <div className="header-shimmer"></div>
-      <div className="header-inner">
-        <div className="header-left">
-          {/* Logo on Left Side */}
-          <Link
-            to="/app/dashboard"
-            className="header-brand-logo flex items-center gap-2 mr-1 sm:mr-2 flex-shrink-0 group"
-            title="Expense Tracker"
-          >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-purple-500/25 group-hover:scale-105 active:scale-95 transition-all">
-              <CreditCard size={18} className="text-white" />
-            </div>
-            <span className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-700 via-indigo-700 to-pink-600 bg-clip-text text-transparent hidden sm:inline lg:hidden">
-              Expense Tracker
-            </span>
-          </Link>
+  const userInitial = user?.firstName?.[0] || user?.username?.[0] || 'U'
 
-          <Sparkles className="header-sparkle" />
-          <h2 className="header-welcome">
-            {t('header.welcomeBack')} <span className="header-username">{user?.firstName || user?.username}</span>!
-          </h2>
-          {isAdmin && (
-            <span className="header-admin-badge">
-              <Shield size={12} className="mr-1" />
-              {t('header.admin')}
+  return (
+    <header className="h-16 bg-white border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Logo on Left for small screens where sidebar is hidden */}
+        <Link
+          to="/app/dashboard"
+          className="flex items-center gap-2 lg:hidden flex-shrink-0"
+          title="Expense Tracker"
+        >
+          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold shadow-xs">
+            <CreditCard size={16} />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-slate-900 hidden sm:inline">
+            Expense Tracker
+          </span>
+        </Link>
+
+        {/* Human greeting / context */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm text-slate-500 hidden sm:inline">
+            {t('header.welcomeBack') || 'Welcome back,'}
+          </span>
+          <span className="text-sm font-semibold text-slate-900 truncate">
+            {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username}
+          </span>
+          {(isAdmin || isOwner) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              <Shield size={11} className="text-slate-500" />
+              <span>{isOwner ? 'Owner' : 'Admin'}</span>
             </span>
           )}
         </div>
-        
-        <div className="header-right">
-          {/* Language Switcher */}
-          <LanguageSwitcher />
+      </div>
+      
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <LanguageSwitcher />
 
-          {/* User Dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={toggleDropdown}
-              className="header-user-btn"
-              type="button"
-            >
-              <div className={`header-avatar ${
-                isAdmin 
-                  ? 'bg-gradient-to-r from-purple-300 to-pink-300' 
-                  : 'bg-gradient-to-r from-sky-300 to-purple-300'
-              }`}>
-                <User size={18} className="text-white" />
-              </div>
-              <span className="header-user-name">{user?.username}</span>
-            </button>
-            
-            {showDropdown && (
-              <div className="header-dropdown">
-                <div className="header-dropdown-info">
-                  <div className="font-semibold text-gray-700 mb-1">
-                    {user?.firstName} {user?.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500 break-all">
-                    {user?.email}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex items-center text-purple-500 text-xs font-semibold mt-2">
-                      <Shield size={10} className="mr-1" />
-                      {t('header.administrator')}
-                    </div>
-                  )}
+        {/* User Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={toggleDropdown}
+            className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-lg hover:bg-slate-100 border border-slate-200/80 transition-colors text-slate-700"
+            type="button"
+            aria-expanded={showDropdown}
+          >
+            <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center text-xs font-bold uppercase shadow-xs">
+              {userInitial}
+            </div>
+            <span className="text-xs font-semibold text-slate-700 hidden sm:inline max-w-[120px] truncate">
+              {user?.username}
+            </span>
+          </button>
+          
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50 animate-fadeIn">
+              <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                <div className="font-semibold text-sm text-slate-900 truncate">
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="header-logout-btn"
-                >
-                  <LogOut size={16} className="mr-2" />
-                  {t('header.signOut')}
-                </button>
+                <div className="text-xs text-slate-500 truncate mt-0.5">
+                  {user?.email}
+                </div>
+                {(isAdmin || isOwner) && (
+                  <div className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                    <Shield size={10} />
+                    <span>{isOwner ? 'System Owner' : 'Administrator'}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-left"
+              >
+                <LogOut size={14} />
+                <span>{t('header.signOut') || 'Sign Out'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      <style>{`
-        .header-root {
-          background: linear-gradient(to right, #f0f9ff, #faf5ff, #fdf2f8);
-          backdrop-filter: blur(20px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          border-bottom: 1px solid rgba(233, 213, 255, 0.5);
-          position: relative;
-          overflow: visible;
-          z-index: 40;
-        }
-
-        .header-shimmer {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
-          pointer-events: none;
-        }
-
-        .header-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          height: 4rem;
-          padding: 0 1.5rem;
-          position: relative;
-          z-index: 10;
-        }
-
-        /* On mobile, standard padding */
-        @media (max-width: 1023px) {
-          .header-inner {
-            padding-left: 1rem;
-            padding-right: 1rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .header-inner {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-            gap: 0.5rem;
-          }
-        }
-
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          min-width: 0;
-          flex: 1;
-        }
-
-        .header-sparkle {
-          width: 1.25rem;
-          height: 1.25rem;
-          color: #fbbf24;
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-          flex-shrink: 0;
-        }
-
-        .header-welcome {
-          font-size: 1.125rem;
-          font-weight: 600;
-          color: #374151;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          min-width: 0;
-        }
-
-        @media (max-width: 640px) {
-          .header-welcome {
-            font-size: 0.875rem;
-          }
-        }
-
-        @media (max-width: 400px) {
-          .header-welcome {
-            display: none;
-          }
-          .header-sparkle {
-            display: none;
-          }
-        }
-
-        .header-username {
-          background: linear-gradient(to right, #c084fc, #f472b6);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          font-weight: 700;
-        }
-
-        .header-admin-badge {
-          display: none;
-          align-items: center;
-          padding: 0.25rem 0.75rem;
-          background: linear-gradient(to right, #d8b4fe, #f9a8d4);
-          color: #6b21a8;
-          font-size: 0.75rem;
-          font-weight: 600;
-          border-radius: 9999px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-          flex-shrink: 0;
-        }
-
-        @media (min-width: 768px) {
-          .header-admin-badge {
-            display: inline-flex;
-          }
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          flex-shrink: 0;
-        }
-
-        @media (min-width: 640px) {
-          .header-right {
-            gap: 0.75rem;
-          }
-        }
-
-        .header-user-btn {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem;
-          border-radius: 9999px;
-          transition: all 0.3s ease;
-          cursor: pointer;
-          border: none;
-          background: transparent;
-        }
-
-        .header-user-btn:hover {
-          background: rgba(233, 213, 255, 0.5);
-        }
-
-        .header-user-btn:focus {
-          outline: none;
-          box-shadow: 0 0 0 2px #d8b4fe, 0 0 0 4px white;
-        }
-
-        .header-avatar {
-          width: 2.5rem;
-          height: 2.5rem;
-          border-radius: 9999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-          transition: transform 0.3s ease;
-          flex-shrink: 0;
-        }
-
-        @media (max-width: 480px) {
-          .header-avatar {
-            width: 2rem;
-            height: 2rem;
-          }
-        }
-
-        .header-avatar:hover {
-          transform: scale(1.1);
-        }
-
-        .header-user-name {
-          display: none;
-          font-weight: 600;
-          color: #4b5563;
-        }
-
-        @media (min-width: 768px) {
-          .header-user-name {
-            display: block;
-          }
-        }
-
-        .header-dropdown {
-          position: absolute;
-          right: 0;
-          margin-top: 0.5rem;
-          width: 14rem;
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(20px);
-          border-radius: 0.75rem;
-          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-          border: 1px solid rgba(233, 213, 255, 0.5);
-          overflow: hidden;
-          z-index: 9999;
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        .header-dropdown-info {
-          padding: 1rem;
-          border-bottom: 1px solid rgba(250, 245, 255, 0.8);
-        }
-
-        .header-logout-btn {
-          display: flex;
-          align-items: center;
-          width: 100%;
-          padding: 0.75rem 1rem;
-          font-size: 0.875rem;
-          color: #ef4444;
-          font-weight: 600;
-          transition: all 0.3s ease;
-          border: none;
-          background: transparent;
-          cursor: pointer;
-        }
-
-        .header-logout-btn:hover {
-          background: #fef2f2;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
     </header>
   )
 }

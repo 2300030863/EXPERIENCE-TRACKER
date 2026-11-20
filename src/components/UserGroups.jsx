@@ -481,29 +481,7 @@ function UserGroups() {
           padding: 1.5rem;
           position: relative;
           min-height: 100vh;
-        }
-        
-        .user-groups-wrapper::before {
-          content: '';
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 25%, #fae8ff 50%, #fce7f3 75%, #ffe4e6 100%);
-          z-index: -1;
-          animation: gradientShift 20s ease infinite;
-        }
-        
-        @keyframes gradientShift {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.9;
-            transform: scale(1.05);
-          }
+          background-color: #f8fafc;
         }
         
         .groups-header {

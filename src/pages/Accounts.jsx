@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { accountAPI } from '../services/api'
-import { Plus, Edit, Trash2, Wallet } from 'lucide-react'
+import { Plus, Edit, Trash2, Wallet, Landmark, CreditCard as CardIcon, PiggyBank, TrendingUp, CircleDollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
@@ -39,7 +39,6 @@ function Accounts() {
     e.preventDefault()
     e.stopPropagation()
     
-    // Double protection against multiple submissions
     if (submitting || isSubmittingRef.current) return
     
     isSubmittingRef.current = true
@@ -63,7 +62,6 @@ function Accounts() {
       setEditingAccount(null)
       resetForm()
       
-      // Wait a bit before refetching to avoid race conditions
       setTimeout(() => {
         fetchAccounts()
       }, 100)
@@ -112,253 +110,238 @@ function Accounts() {
     return formatCurrencyUtil(amount, userCountry)
   }
 
-  const getAccountTypeIcon = (type) => {
+  const getAccountIcon = (type) => {
     switch (type) {
       case 'BANK':
-        return '🏦'
+        return <Landmark size={20} className="text-slate-700" />
       case 'CREDIT_CARD':
-        return '💳'
+        return <CardIcon size={20} className="text-slate-700" />
       case 'WALLET':
-        return '👛'
+        return <Wallet size={20} className="text-slate-700" />
       case 'SAVINGS':
-        return '💰'
+        return <PiggyBank size={20} className="text-slate-700" />
       case 'INVESTMENT':
-        return '📈'
+        return <TrendingUp size={20} className="text-slate-700" />
       default:
-        return '💵'
+        return <CircleDollarSign size={20} className="text-slate-700" />
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-900 border-t-transparent"></div>
       </div>
     )
   }
 
+  const totalBalance = accounts.reduce((sum, acc) => sum + (parseFloat(acc.balance) || 0), 0)
+
   return (
-    <div className="accounts-wrapper">
-      <div className="accounts-background">
-        <div className="accounts-orb accounts-orb-1"></div>
-        <div className="accounts-orb accounts-orb-2"></div>
-      </div>
-      
-      <div className="space-y-6 relative z-10">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">Accounts</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Accounts & Wallets</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Manage your payment sources, checking accounts, and available balances.
+          </p>
+        </div>
         <button
           onClick={() => {
             resetForm()
             setEditingAccount(null)
             setShowModal(true)
           }}
-          className="btn-primary flex items-center justify-center bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 w-full sm:w-auto"
+          className="btn-primary w-full sm:w-auto"
         >
-          <Plus size={20} className="mr-2" />
+          <Plus size={16} className="mr-1.5" />
           Add Account
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Aggregate Balance Banner */}
+      <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Liquid Balance</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums mt-0.5">
+            {formatCurrency(totalBalance)}
+          </h2>
+        </div>
+        <div className="text-xs text-slate-500 font-medium">
+          {accounts.length} linked account{accounts.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Accounts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {accounts.map((account) => (
-          <div key={account.id} className="card bg-gradient-to-br from-white to-cyan-50/50 border-2 border-cyan-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="text-2xl mr-3 bg-gradient-to-br from-cyan-100 to-blue-100 p-3 rounded-xl shadow-md">
-                  {getAccountTypeIcon(account.type)}
+          <div key={account.id} className="card hover:border-slate-300 transition-colors flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    {getAccountIcon(account.type)}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 text-sm leading-snug">
+                      {account.name}
+                    </h3>
+                    <span className="text-xs text-slate-500 capitalize">
+                      {account.type.replace('_', ' ').toLowerCase()}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-700 to-blue-700 bg-clip-text text-transparent">
-                    {account.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 capitalize">
-                    {account.type.replace('_', ' ').toLowerCase()}
-                  </p>
-                  {account.description && (
-                    <p className="text-sm text-gray-500">{account.description}</p>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-xl font-bold ${
-                  account.balance >= 0 ? 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent' : 'bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'
-                }`}>
-                  {formatCurrency(account.balance)}
-                </p>
-                <div className="flex space-x-2 mt-2">
+                
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleEdit(account)}
-                    className="text-cyan-600 hover:text-cyan-900 p-2 hover:bg-cyan-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+                    title="Edit account"
                   >
-                    <Edit size={16} />
+                    <Edit size={15} />
                   </button>
                   <button
                     onClick={() => handleDelete(account.id)}
-                    className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                    title="Delete account"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
+
+              {account.description && (
+                <p className="text-xs text-slate-500 mt-3 line-clamp-2">
+                  {account.description}
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-400">Current Balance</span>
+              <span className={`text-base font-bold tabular-nums ${
+                account.balance >= 0 ? 'text-slate-900' : 'text-rose-600'
+              }`}>
+                {formatCurrency(account.balance)}
+              </span>
             </div>
           </div>
         ))}
+
+        {accounts.length === 0 && (
+          <div className="col-span-full py-12 text-center bg-white rounded-xl border border-dashed border-slate-200">
+            <Wallet size={32} className="mx-auto text-slate-300 mb-2" />
+            <h3 className="text-sm font-semibold text-slate-800">No accounts registered yet</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Add your primary bank accounts, credit cards, or cash wallets to track where money flows.
+            </p>
+            <button
+              onClick={() => {
+                resetForm()
+                setEditingAccount(null)
+                setShowModal(true)
+              }}
+              className="mt-4 btn-primary inline-flex text-xs"
+            >
+              <Plus size={14} className="mr-1" />
+              Add First Account
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Account Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative mx-auto p-4 sm:p-6 border-2 border-white/60 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl bg-white/95 backdrop-blur-lg animate-fadeIn">
-            <div className="mt-3">
-              <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-4">
-                {editingAccount ? 'Edit Account' : 'Add New Account'}
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="input-field mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Type *</label>
-                  <select
-                    required
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="input-field mt-1"
-                  >
-                    <option value="CASH">Cash</option>
-                    <option value="BANK">Bank Account</option>
-                    <option value="CREDIT_CARD">Credit Card</option>
-                    <option value="WALLET">Digital Wallet</option>
-                    <option value="SAVINGS">Savings Account</option>
-                    <option value="INVESTMENT">Investment Account</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Initial Balance</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.balance}
-                    onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                    className="input-field mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="input-field mt-1"
-                    rows="3"
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="btn-secondary"
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn-primary"
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Saving...' : (editingAccount ? 'Update' : 'Create')}
-                  </button>
-                </div>
-              </form>
-            </div>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative mx-auto p-5 sm:p-6 w-full max-w-md shadow-xl rounded-xl bg-white border border-slate-200 animate-fadeIn">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              {editingAccount ? 'Edit Account' : 'Add New Account'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Account Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. HDFC Salary Account, Personal Amex"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Type *
+                </label>
+                <select
+                  required
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="BANK">Bank Account</option>
+                  <option value="CREDIT_CARD">Credit Card</option>
+                  <option value="WALLET">Digital Wallet</option>
+                  <option value="SAVINGS">Savings Account</option>
+                  <option value="INVESTMENT">Investment Account</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Initial Balance
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.balance}
+                  onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                  Description / Notes
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="input-field"
+                  rows="2"
+                  placeholder="Optional details or account purpose"
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="btn-secondary"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Saving...' : (editingAccount ? 'Update Account' : 'Create Account')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-      </div>
-      
-      <style>{`
-        .accounts-wrapper {
-          position: relative;
-          min-height: 100vh;
-        }
-        
-        .accounts-background {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(135deg, #CFFAFE 0%, #DBEAFE 50%, #E0E7FF 100%);
-          z-index: -1;
-        }
-        
-        .accounts-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(70px);
-          opacity: 0.35;
-          animation: float-accounts 22s ease-in-out infinite;
-        }
-        
-        .accounts-orb-1 {
-          width: 440px;
-          height: 440px;
-          background: linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%);
-          top: -115px;
-          right: -115px;
-        }
-        
-        .accounts-orb-2 {
-          width: 390px;
-          height: 390px;
-          background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
-          bottom: -105px;
-          left: -105px;
-          animation-delay: 11s;
-        }
-        
-        @keyframes float-accounts {
-          0%, 100% { 
-            transform: translate(0, 0) scale(1) rotate(0deg);
-          }
-          50% { 
-            transform: translate(38px, -38px) scale(1.1) rotate(6deg);
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
     </div>
   )
 }
 
 export default Accounts
-
-
-

@@ -209,20 +209,15 @@ function Transactions() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-600 selection:text-white pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
+    <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles size={14} className="text-emerald-600" />
-              <span>Real-Time Financial Ledger</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Transactions & Records
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Track, filter, and manage all your income streams and expense expenditures.
+            <p className="text-sm text-slate-500 mt-0.5">
+              View, record, and filter all income and expenses across your accounts.
             </p>
           </div>
 
@@ -233,9 +228,9 @@ function Transactions() {
                 setEditingTransaction(null)
                 setShowModal(true)
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all"
+              className="btn-primary"
             >
-              <Plus size={18} />
+              <Plus size={16} className="mr-1.5" />
               <span>Record Transaction</span>
             </button>
           </div>
@@ -243,59 +238,59 @@ function Transactions() {
 
         {/* 3 Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Income (Inflow)</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Income</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-emerald-700 tabular-nums mt-1">
                 {formatCurrency(totalIncome)}
               </h3>
-              <span className="text-[11px] font-medium text-emerald-600 mt-1 inline-block">Incoming Revenue</span>
+              <span className="text-xs text-emerald-700 mt-1 inline-block font-medium">Recorded Inflow</span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <TrendingUp size={24} />
+            <div className="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <TrendingUp size={22} />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Expenses (Outflow)</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-rose-600 mt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Expenses</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-rose-700 tabular-nums mt-1">
                 {formatCurrency(totalExpense)}
               </h3>
-              <span className="text-[11px] font-medium text-rose-600 mt-1 inline-block">Outgoing Expenditures</span>
+              <span className="text-xs text-rose-700 mt-1 inline-block font-medium">Recorded Outflow</span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              <TrendingDown size={24} />
+            <div className="w-11 h-11 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+              <TrendingDown size={22} />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between">
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Net Period Balance</p>
-              <h3 className={`text-2xl sm:text-3xl font-black mt-1 ${netBalance >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Net Balance</p>
+              <h3 className={`text-2xl sm:text-3xl font-bold tabular-nums mt-1 ${netBalance >= 0 ? 'text-slate-900' : 'text-rose-700'}`}>
                 {formatCurrency(netBalance)}
               </h3>
-              <span className="text-[11px] font-medium text-slate-500 mt-1 inline-block">
+              <span className="text-xs text-slate-500 mt-1 inline-block font-medium">
                 {transactions.length} record{transactions.length !== 1 ? 's' : ''} listed
               </span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-              <DollarSign size={24} />
+            <div className="w-11 h-11 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+              <DollarSign size={22} />
             </div>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-5 space-y-3">
+        <div className="card space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Filter size={16} className="text-slate-500" />
-              <h3 className="text-sm font-bold text-slate-800">Filter Ledger</h3>
+              <Filter size={15} className="text-slate-500" />
+              <h3 className="text-sm font-semibold text-slate-800">Filter Transactions</h3>
             </div>
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 p-1 rounded-md hover:bg-rose-50 transition-colors"
               >
                 <RotateCcw size={13} />
                 <span>Reset Filters</span>
@@ -813,7 +808,6 @@ function Transactions() {
           </div>
         )}
       </div>
-    </div>
   )
 }
 

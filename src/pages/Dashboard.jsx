@@ -144,8 +144,7 @@ function Dashboard() {
   const netAmount = dashboardData?.netAmount || 0
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-600 selection:text-white pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
+    <div className="space-y-6">
         {/* Country Selection Modal */}
         <CountrySelectionModal 
           isOpen={showCountryModal}
@@ -154,43 +153,25 @@ function Dashboard() {
           userProfile={user}
         />
 
-        {/* Executive Header Banner */}
-        <div className={`rounded-2xl p-5 sm:p-6 shadow-sm border transition-all ${
-          isOwner
-            ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white border-amber-200/80'
-            : isAdmin
-            ? 'bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-white border-purple-200/80'
-            : 'bg-white border-slate-200/80'
-        }`}>
+        {/* Dashboard Header */}
+        <div className="bg-white rounded-xl p-5 sm:p-6 shadow-xs border border-slate-200/90">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm flex-shrink-0 ${
-                isOwner
-                  ? 'bg-gradient-to-tr from-amber-500 to-orange-500'
-                  : isAdmin
-                  ? 'bg-gradient-to-tr from-purple-600 to-indigo-600'
-                  : 'bg-gradient-to-tr from-indigo-600 to-blue-600'
-              }`}>
-                {isOwner ? <Crown size={22} /> : isAdmin ? <Shield size={22} /> : <UserIcon size={22} />}
+              <div className="w-11 h-11 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-base shadow-xs flex-shrink-0">
+                {user?.firstName?.[0] || user?.username?.[0] || 'U'}
               </div>
 
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {t('dashboard.welcome') || 'Welcome back'}, {user?.firstName || user?.username}!
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                    {t('dashboard.welcome') || 'Welcome back'}, {user?.firstName || user?.username}
                   </h1>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                    isOwner
-                      ? 'bg-amber-100 text-amber-800 border-amber-300'
-                      : isAdmin
-                      ? 'bg-purple-100 text-purple-800 border-purple-300'
-                      : 'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}>
-                    {isOwner ? '👑 System Owner' : isAdmin ? '🛡️ Administrator' : '👤 Member'}
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    {isOwner ? 'System Owner' : isAdmin ? 'Administrator' : 'Member'}
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  {user?.email} • Financial Overview & Live Ledger Intelligence
+                  Overview of your income, expenses, and current cash flow.
                 </p>
               </div>
             </div>
@@ -199,44 +180,44 @@ function Dashboard() {
               {isOwner && (
                 <button
                   onClick={() => navigate('/app/owner')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition-colors shadow-xs"
+                  className="btn-secondary text-xs"
                 >
-                  <Crown size={14} />
-                  <span>Owner Command</span>
+                  <Crown size={14} className="mr-1.5 text-amber-600" />
+                  <span>Owner Panel</span>
                 </button>
               )}
               {isAdmin && (
                 <button
                   onClick={() => navigate('/app/admin')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition-colors shadow-xs"
+                  className="btn-secondary text-xs"
                 >
-                  <Shield size={14} />
-                  <span>Admin Center</span>
+                  <Shield size={14} className="mr-1.5 text-slate-600" />
+                  <span>Admin Panel</span>
                 </button>
               )}
               <button
                 onClick={() => navigate('/app/transactions')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm shadow-indigo-600/20 active:scale-95 transition-all"
+                className="btn-primary text-xs sm:text-sm"
               >
-                <Plus size={16} />
-                <span>New Transaction</span>
+                <Plus size={16} className="mr-1" />
+                <span>Add Transaction</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Filter & Range Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 hidden sm:inline">
-              Period Preset:
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1 hidden sm:inline">
+              Period:
             </span>
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+            <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setPresetRange('this-month')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                   activePreset === 'this-month'
-                    ? 'bg-white text-indigo-600 shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -244,9 +225,9 @@ function Dashboard() {
               </button>
               <button
                 onClick={() => setPresetRange('last-30')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                   activePreset === 'last-30'
-                    ? 'bg-white text-indigo-600 shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -254,9 +235,9 @@ function Dashboard() {
               </button>
               <button
                 onClick={() => setPresetRange('ytd')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                   activePreset === 'ytd'
-                    ? 'bg-white text-indigo-600 shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -277,7 +258,7 @@ function Dashboard() {
                 setActivePreset('custom')
                 setDateRange({ ...dateRange, startDate: new Date(e.target.value) })
               }}
-              className="text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="text-xs font-medium bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-colors"
             />
             <span className="text-xs text-slate-400">to</span>
             <input
@@ -287,70 +268,70 @@ function Dashboard() {
                 setActivePreset('custom')
                 setDateRange({ ...dateRange, endDate: new Date(e.target.value) })
               }}
-              className="text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="text-xs font-medium bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-colors"
             />
           </div>
         </div>
 
         {/* 3 Top Financial KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Inflow / Income */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition-shadow">
+          {/* Income */}
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t('dashboard.totalIncome') || 'Total Inflow (Income)'}
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {t('dashboard.totalIncome') || 'Total Income'}
               </p>
-              <h3 className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
+              <h3 className="text-2xl sm:text-3xl font-bold text-emerald-700 tabular-nums mt-1">
                 {formatCurrency(dashboardData?.totalIncome || 0)}
               </h3>
-              <span className="text-[11px] font-medium text-emerald-600 mt-1 inline-flex items-center gap-1">
+              <span className="text-xs text-emerald-700 mt-1 inline-flex items-center gap-1 font-medium">
                 <ArrowUpRight size={13} />
-                <span>Recorded revenue stream</span>
+                <span>Inflow in this period</span>
               </span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <TrendingUp size={24} />
+            <div className="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <TrendingUp size={22} />
             </div>
           </div>
 
-          {/* Outflow / Expenses */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition-shadow">
+          {/* Expenses */}
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t('dashboard.totalExpenses') || 'Total Outflow (Expenses)'}
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {t('dashboard.totalExpenses') || 'Total Expenses'}
               </p>
-              <h3 className="text-2xl sm:text-3xl font-black text-rose-600 mt-1">
+              <h3 className="text-2xl sm:text-3xl font-bold text-rose-700 tabular-nums mt-1">
                 {formatCurrency(dashboardData?.totalExpenses || 0)}
               </h3>
-              <span className="text-[11px] font-medium text-rose-600 mt-1 inline-flex items-center gap-1">
+              <span className="text-xs text-rose-700 mt-1 inline-flex items-center gap-1 font-medium">
                 <ArrowDownRight size={13} />
-                <span>Recorded outgoing expenses</span>
+                <span>Outflow in this period</span>
               </span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              <TrendingDown size={24} />
+            <div className="w-11 h-11 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center">
+              <TrendingDown size={22} />
             </div>
           </div>
 
-          {/* Net Amount / Margin */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between hover:shadow-md transition-shadow">
+          {/* Net Margin */}
+          <div className="card flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t('dashboard.netAmount') || 'Net Cashflow'}
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {t('dashboard.netAmount') || 'Net Cash Flow'}
               </p>
-              <h3 className={`text-2xl sm:text-3xl font-black mt-1 ${netAmount >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+              <h3 className={`text-2xl sm:text-3xl font-bold tabular-nums mt-1 ${netAmount >= 0 ? 'text-slate-900' : 'text-rose-700'}`}>
                 {formatCurrency(netAmount)}
               </h3>
-              <span className={`text-[11px] font-medium mt-1 inline-flex items-center gap-1 ${
-                netAmount >= 0 ? 'text-indigo-600' : 'text-rose-600'
+              <span className={`text-xs mt-1 inline-flex items-center gap-1 font-medium ${
+                netAmount >= 0 ? 'text-slate-600' : 'text-rose-700'
               }`}>
-                <span>{netAmount >= 0 ? 'Positive Net Margin' : 'Negative Cashflow Deficit'}</span>
+                <span>{netAmount >= 0 ? 'Inflow exceeds expenses' : 'Expenses exceed income'}</span>
               </span>
             </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold ${
-              netAmount >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'
+            <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${
+              netAmount >= 0 ? 'bg-slate-100 text-slate-700' : 'bg-rose-50 text-rose-700'
             }`}>
-              <DollarSign size={24} />
+              <DollarSign size={22} />
             </div>
           </div>
         </div>
@@ -358,7 +339,7 @@ function Dashboard() {
         {/* Visual Analytics Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Category Spending Donut Chart & Breakdown */}
-          <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80">
+          <div className="lg:col-span-6 card">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -429,14 +410,14 @@ function Dashboard() {
           </div>
 
           {/* Monthly Spending Trend Area Chart */}
-          <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80">
+          <div className="lg:col-span-6 card">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
                   <BarChart3 size={16} />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-slate-900">
                     {t('dashboard.monthlySpendingTrend') || 'Monthly Spending Trend'}
                   </h3>
                   <p className="text-xs text-slate-500">Historical velocity and cashflow trend</p>
@@ -450,8 +431,8 @@ function Dashboard() {
                   <AreaChart data={trendData}>
                     <defs>
                       <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#0f172a" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#0f172a" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
@@ -470,16 +451,16 @@ function Dashboard() {
                     <Tooltip
                       formatter={(value) => [formatCurrency(value), 'Spending']}
                       contentStyle={{
-                        borderRadius: '12px',
+                        borderRadius: '8px',
                         border: '1px solid #E2E8F0',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
                       }}
                     />
                     <Area
                       type="monotone"
                       dataKey="amount"
-                      stroke="#6366F1"
-                      strokeWidth={2.5}
+                      stroke="#0f172a"
+                      strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#spendGradient)"
                     />
@@ -497,11 +478,11 @@ function Dashboard() {
         </div>
 
         {/* Quick Command Shortcuts Hub */}
-        <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80">
+        <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">
-                {t('dashboard.quickActions') || 'Financial Management Hub'}
+              <h3 className="text-sm font-bold text-slate-900">
+                {t('dashboard.quickActions') || 'Financial Shortcuts'}
               </h3>
               <p className="text-xs text-slate-500">Quickly jump into actions, budgets, and schedules</p>
             </div>
@@ -510,90 +491,90 @@ function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => navigate('/app/transactions')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-indigo-50/50 hover:border-indigo-200 text-left transition-all group"
+              className="flex items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-left transition-colors group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Plus size={18} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                  <Plus size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                    {t('dashboard.addNewTransaction') || 'Record Transaction'}
+                  <div className="text-xs font-semibold text-slate-900">
+                    {t('dashboard.addNewTransaction') || 'Add Transaction'}
                   </div>
                   <div className="text-[11px] text-slate-500">New ledger entry</div>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight size={15} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
             </button>
 
             <button
               onClick={() => navigate('/app/recurring-transactions')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-purple-50/50 hover:border-purple-200 text-left transition-all group"
+              className="flex items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-left transition-colors group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Repeat size={18} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                  <Repeat size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
-                    Recurring Schedules
+                  <div className="text-xs font-semibold text-slate-900">
+                    Recurring Bills
                   </div>
                   <div className="text-[11px] text-slate-500">Subscriptions & rent</div>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight size={15} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
             </button>
 
             <button
               onClick={() => navigate('/app/budgets')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-emerald-50/50 hover:border-emerald-200 text-left transition-all group"
+              className="flex items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-left transition-colors group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Wallet size={18} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                  <Wallet size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                  <div className="text-xs font-semibold text-slate-900">
                     {t('dashboard.setBudget') || 'Category Budgets'}
                   </div>
                   <div className="text-[11px] text-slate-500">Spending guardrails</div>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight size={15} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
             </button>
 
             <button
               onClick={() => navigate('/app/reports')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-blue-50/50 hover:border-blue-200 text-left transition-all group"
+              className="flex items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-left transition-colors group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <FileText size={18} />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                  <FileText size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  <div className="text-xs font-semibold text-slate-900">
                     Financial Reports
                   </div>
-                  <div className="text-[11px] text-slate-500">PDF & summary analytics</div>
+                  <div className="text-[11px] text-slate-500">PDF & CSV exports</div>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight size={15} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
             </button>
           </div>
         </div>
 
-        {/* Admin Privilege Request Card (Single Clean Banner for Regular Users) */}
+        {/* Admin Privilege Request Card */}
         {isUser && !user?.isGroupMember && (
-          <div className="p-4 sm:p-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/60 to-purple-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
                 <Shield size={18} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-indigo-950">
+                <h4 className="text-xs sm:text-sm font-semibold text-slate-900">
                   {t('dashboard.wantAdminAccess') || 'Need Administrator Privileges?'}
                 </h4>
-                <p className="text-xs text-slate-600 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   {t('dashboard.adminAccessDesc') || 'Request advanced administrative permissions from the system owner to supervise teams and categories.'}
                 </p>
               </div>
@@ -601,14 +582,13 @@ function Dashboard() {
 
             <a
               href={`mailto:experiencetracker52@gmail.com?subject=Admin Access Request&body=Hello,%0D%0A%0D%0AI would like to request administrator privileges for my account.%0D%0A%0D%0AUser Details:%0D%0AName: ${user?.firstName ? user.firstName + (user.lastName ? ' ' + user.lastName : '') : (user?.name || user?.username || 'N/A')}%0D%0AEmail: ${user?.email || 'N/A'}%0D%0A%0D%0AThank you.`}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors shadow-xs shrink-0"
+              className="btn-secondary text-xs inline-flex items-center justify-center gap-1.5 shrink-0"
             >
               <Mail size={14} />
               <span>{t('dashboard.contactOwner') || 'Contact Owner'}</span>
             </a>
           </div>
         )}
-      </div>
     </div>
   )
 }
