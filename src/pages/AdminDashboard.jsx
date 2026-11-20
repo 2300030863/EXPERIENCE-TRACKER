@@ -75,8 +75,9 @@ function AdminDashboard() {
     try {
       setLoading(true)
       const response = await adminAPI.getAllUsers()
-      setUsers(response.data)
-      setFilteredUsers(response.data)
+      const userList = Array.isArray(response.data) ? response.data : []
+      setUsers(userList)
+      setFilteredUsers(userList)
     } catch (error) {
       console.error('Error fetching users:', error)
       toast.error('Failed to load users')

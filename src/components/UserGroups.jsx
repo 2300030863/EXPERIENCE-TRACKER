@@ -38,10 +38,10 @@ function UserGroups() {
     try {
       setLoading(true);
       const response = await adminAPI.getUserGroups();
-      setGroups(response.data);
+      setGroups(Array.isArray(response.data) ? response.data : []);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load user groups');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to load user groups');
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ function UserGroups() {
   const fetchAllUsers = async () => {
     try {
       const response = await adminAPI.getAllUsers();
-      setAllUsers(response.data);
+      setAllUsers(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error('Failed to load users:', err);
     }
@@ -59,15 +59,16 @@ function UserGroups() {
   const fetchGroupUsers = async (groupId) => {
     try {
       const response = await adminAPI.getUsersInGroup(groupId);
-      setGroupUsers(response.data);
+      const userList = Array.isArray(response.data) ? response.data : [];
+      setGroupUsers(userList);
       setSelectedGroup(groupId);
       
       // Fetch accounts for each user
       const accountsData = {};
-      for (const user of response.data) {
+      for (const user of userList) {
         try {
           const accountsResponse = await adminAPI.getUserAccounts(user.id);
-          accountsData[user.id] = accountsResponse.data;
+          accountsData[user.id] = Array.isArray(accountsResponse.data) ? accountsResponse.data : [];
         } catch (err) {
           console.error(`Failed to load accounts for user ${user.id}:`, err);
           accountsData[user.id] = [];
@@ -78,14 +79,14 @@ function UserGroups() {
       // Fetch categories (all categories available to group members)
       await fetchGroupCategories();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load group users');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to load group users');
     }
   };
   
   const fetchGroupCategories = async () => {
     try {
       const response = await categoryAPI.getAll();
-      setGroupCategories(response.data);
+      setGroupCategories(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error('Failed to load categories:', err);
       setGroupCategories([]);
@@ -343,7 +344,7 @@ function UserGroups() {
                   <p className="group-description">{group.description}</p>
                 )}
                 <p className="group-date">
-                  Created: {new Date(group.createdAt).toLocaleDateString()}
+                  Created: {new Date(group.createdAt || group.created_at || Date.now()).toLocaleDateString()}
                 </p>
               </div>
             ))}
@@ -403,7 +404,7 @@ function UserGroups() {
                             </div>
                             <div className="member-details">
                               <div className="member-name">
-                                {user.firstName} {user.lastName}
+                                {user.firstName || user.first_name || ''} {user.lastName || user.last_name || ''}
                               </div>
                             </div>
                           </div>
