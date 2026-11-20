@@ -46,6 +46,14 @@
     }
   }
 
+  button:disabled,
+  [type='submit']:disabled {
+    cursor: not-allowed;
+  }
+  button:disabled:not([class*='disabled:opacity']) {
+    opacity: 0.55;
+  }
+
   /* Smooth custom scrollbars */
   ::-webkit-scrollbar {
     width: 6px;

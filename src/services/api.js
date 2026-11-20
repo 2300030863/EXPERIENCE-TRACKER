@@ -7,11 +7,6 @@ const API_BASE_URL =
     ? 'https://renderexpensivetracker.onrender.com' 
     : 'http://localhost:8086/expense-tracker-api');
 
-// Debug logging for API URL
-console.log('API Base URL:', API_BASE_URL)
-console.log('Environment:', import.meta.env.MODE)
-console.log('Production:', import.meta.env.PROD)
-
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,

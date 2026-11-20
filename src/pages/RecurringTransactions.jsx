@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { recurringTransactionAPI, categoryAPI, accountAPI } from '../services/api'
-import { Plus, Edit, Trash2, Play, Pause, Calendar, Repeat, Info, AlertCircle, CheckCircle, X, ArrowDownRight, ArrowUpRight, Wallet, Tag, FileText, Sparkles, Clock, DollarSign, TrendingDown, TrendingUp } from 'lucide-react'
+import { Plus, Edit, Loader2, AlertTriangle, Trash2, Play, Pause, Calendar, Repeat, Info, AlertCircle, CheckCircle, X, ArrowDownRight, ArrowUpRight, Wallet, Tag, FileText, Sparkles, Clock, DollarSign, TrendingDown, TrendingUp } from 'lucide-react'
 import { format } from 'date-fns'
+import { getServerMessage } from '../utils/errorHandler'
+import { parseLocalDate, toDateInputValue, todayString, formatDisplayDate, isBeforeToday } from '../utils/dates'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency'
@@ -22,7 +24,7 @@ function RecurringTransactions() {
     amount: '',
     type: 'EXPENSE',
     recurrenceType: 'MONTHLY',
-    startDate: format(new Date(), 'yyyy-MM-dd'),
+    startDate: todayString(),
     endDate: '',
     notes: '',
     categoryId: '',
@@ -30,10 +32,32 @@ function RecurringTransactions() {
   })
   const [formErrors, setFormErrors] = useState({})
   const [showHelp, setShowHelp] = useState(false)
+  const [busyId, setBusyId] = useState(null) // schedule currently being toggled/executed/deleted
 
   useEffect(() => {
     fetchData()
   }, [])
+
+  // Modal: close with Escape and stop the page behind it from scrolling
+  const closeModal = useCallback(() => {
+    setShowModal(false)
+    setEditingTransaction(null)
+    setFormErrors({})
+  }, [])
+
+  useEffect(() => {
+    if (!showModal) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !isSubmittingRef.current) closeModal()
+    }
+    document.addEventListener('keydown', onKey)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showModal, closeModal])
 
   const fetchData = async () => {
     try {
@@ -43,11 +67,11 @@ function RecurringTransactions() {
         accountAPI.getAll()
       ])
       
-      setRecurringTransactions(recurringRes.data)
-      setCategories(categoriesRes.data)
-      setAccounts(accountsRes.data)
+      setRecurringTransactions(Array.isArray(recurringRes.data) ? recurringRes.data : [])
+      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : [])
+      setAccounts(Array.isArray(accountsRes.data) ? accountsRes.data : [])
     } catch (error) {
-      toast.error('Failed to load data')
+      toast.error(getServerMessage(error, 'Failed to load recurring transactions'))
     } finally {
       setLoading(false)
     }
@@ -66,33 +90,24 @@ function RecurringTransactions() {
     }
     
     // Amount validation
-    if (!formData.amount || formData.amount <= 0) {
+    const amount = Number(formData.amount)
+    if (formData.amount === '' || !Number.isFinite(amount) || amount <= 0) {
       errors.amount = 'Amount must be greater than 0'
-    } else if (formData.amount > 999999.99) {
+    } else if (amount > 999999.99) {
       errors.amount = 'Amount must be less than 9,99,999.99'
     }
-    
-    // Date validation
+
+    // Date validation (compare plain YYYY-MM-DD strings - no time zone surprises)
     if (!formData.startDate) {
       errors.startDate = 'Start date is required'
-    } else {
-      const startDate = new Date(formData.startDate)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      if (startDate < today) {
-        errors.startDate = 'Start date cannot be in the past'
-      }
+    } else if (!editingTransaction && formData.startDate < todayString()) {
+      // Existing schedules keep their original start date, so only new ones are checked
+      errors.startDate = 'Start date cannot be in the past'
     }
-    
-    // End date validation
-    if (formData.endDate) {
-      const startDate = new Date(formData.startDate)
-      const endDate = new Date(formData.endDate)
-      
-      if (endDate <= startDate) {
-        errors.endDate = 'End date must be after start date'
-      }
+
+    // End date validation (same day as the start is allowed: it runs exactly once)
+    if (formData.endDate && formData.startDate && formData.endDate < formData.startDate) {
+      errors.endDate = 'End date must be on or after the start date'
     }
     
     // Category validation
@@ -132,7 +147,10 @@ function RecurringTransactions() {
     try {
       const data = {
         ...formData,
+        description: formData.description.trim(),
         amount: parseFloat(formData.amount),
+        categoryId: Number(formData.categoryId),
+        accountId: Number(formData.accountId),
         endDate: formData.endDate || null
       }
 
@@ -144,16 +162,11 @@ function RecurringTransactions() {
         toast.success('Recurring transaction created successfully')
       }
 
-      setShowModal(false)
-      setEditingTransaction(null)
+      closeModal()
       resetForm()
-      
-      // Wait a bit before refetching to avoid race conditions
-      setTimeout(() => {
-        fetchData()
-      }, 100)
+      await fetchData()
     } catch (error) {
-      toast.error('Failed to save recurring transaction')
+      toast.error(getServerMessage(error, 'Failed to save recurring transaction'))
     } finally {
       setSubmitting(false)
       isSubmittingRef.current = false
@@ -164,11 +177,11 @@ function RecurringTransactions() {
     setEditingTransaction(transaction)
     setFormData({
       description: transaction.description,
-      amount: transaction.amount.toString(),
+      amount: String(transaction.amount ?? ''),
       type: transaction.type,
       recurrenceType: transaction.recurrenceType,
-      startDate: format(new Date(transaction.startDate), 'yyyy-MM-dd'),
-      endDate: transaction.endDate ? format(new Date(transaction.endDate), 'yyyy-MM-dd') : '',
+      startDate: toDateInputValue(transaction.startDate),
+      endDate: toDateInputValue(transaction.endDate),
       notes: transaction.notes || '',
       categoryId: transaction.categoryId?.toString() || '',
       accountId: transaction.accountId?.toString() || ''
@@ -176,35 +189,48 @@ function RecurringTransactions() {
     setShowModal(true)
   }
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this recurring transaction?')) {
-      try {
-        await recurringTransactionAPI.delete(id)
-        toast.success('Recurring transaction deleted successfully')
-        fetchData()
-      } catch (error) {
-        toast.error('Failed to delete recurring transaction')
-      }
+  const handleDelete = async (tx) => {
+    if (busyId) return
+    if (!window.confirm(`Delete "${tx.description}"? Transactions it already created are kept.`)) return
+    setBusyId(tx.id)
+    try {
+      await recurringTransactionAPI.delete(tx.id)
+      toast.success('Recurring transaction deleted successfully')
+      await fetchData()
+    } catch (error) {
+      toast.error(getServerMessage(error, 'Failed to delete recurring transaction'))
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const handleToggle = async (id) => {
+  const handleToggle = async (tx) => {
+    if (busyId) return
+    setBusyId(tx.id)
     try {
-      await recurringTransactionAPI.toggle(id)
-      toast.success('Recurring transaction status updated')
-      fetchData()
+      await recurringTransactionAPI.toggle(tx.id)
+      toast.success(tx.isActive ? 'Schedule paused' : 'Schedule resumed')
+      await fetchData()
     } catch (error) {
-      toast.error('Failed to update recurring transaction status')
+      toast.error(getServerMessage(error, 'Failed to update recurring transaction status'))
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const handleExecute = async (id) => {
+  const handleExecute = async (tx) => {
+    if (busyId) return
+    const label = `${tx.type === 'INCOME' ? 'Add' : 'Deduct'} ${formatCurrency(tx.amount)} now for "${tx.description}"?`
+    if (!window.confirm(`${label}\n\nThis posts one transaction dated today and moves the next due date forward.`)) return
+    setBusyId(tx.id)
     try {
-      await recurringTransactionAPI.execute(id)
-      toast.success('Recurring transaction executed successfully')
-      fetchData()
+      await recurringTransactionAPI.execute(tx.id)
+      toast.success('Transaction posted successfully')
+      await fetchData()
     } catch (error) {
-      toast.error('Failed to execute recurring transaction')
+      toast.error(getServerMessage(error, 'Failed to execute recurring transaction'))
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -214,7 +240,7 @@ function RecurringTransactions() {
       amount: '',
       type: 'EXPENSE',
       recurrenceType: 'MONTHLY',
-      startDate: format(new Date(), 'yyyy-MM-dd'),
+      startDate: todayString(),
       endDate: '',
       notes: '',
       categoryId: '',
@@ -269,8 +295,8 @@ function RecurringTransactions() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
+    <div className="text-slate-900 selection:bg-purple-600 selection:text-white pb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
           <div>
@@ -463,7 +489,13 @@ function RecurringTransactions() {
                           <td className="py-3.5 px-4 text-xs text-slate-600 font-medium">
                             <div className="flex items-center gap-1.5">
                               <Calendar size={13} className="text-slate-400" />
-                              <span>{tx.nextDueDate ? format(new Date(tx.nextDueDate), 'MMM dd, yyyy') : 'N/A'}</span>
+                              <span>{formatDisplayDate(tx.nextDueDate)}</span>
+                              {tx.isActive && isBeforeToday(tx.nextDueDate) && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="Waiting to post - usually because the account balance is too low">
+                                  <AlertTriangle size={10} />
+                                  Overdue
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -489,7 +521,7 @@ function RecurringTransactions() {
                                 <Edit size={15} />
                               </button>
                               <button
-                                onClick={() => handleToggle(tx.id)}
+                                onClick={() => handleToggle(tx)} disabled={busyId === tx.id}
                                 className={`p-1.5 rounded-lg transition-colors ${
                                   tx.isActive
                                     ? 'text-amber-600 hover:bg-amber-50'
@@ -501,7 +533,7 @@ function RecurringTransactions() {
                               </button>
                               {tx.isActive && (
                                 <button
-                                  onClick={() => handleExecute(tx.id)}
+                                  onClick={() => handleExecute(tx)} disabled={busyId === tx.id}
                                   className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                   title="Execute Now Manually"
                                 >
@@ -509,7 +541,7 @@ function RecurringTransactions() {
                                 </button>
                               )}
                               <button
-                                onClick={() => handleDelete(tx.id)}
+                                onClick={() => handleDelete(tx)} disabled={busyId === tx.id}
                                 className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                                 title="Delete Schedule"
                               >
@@ -562,7 +594,13 @@ function RecurringTransactions() {
                         </div>
                         <div className="flex items-center gap-1 text-slate-500 text-[11px]">
                           <Calendar size={11} />
-                          <span>Due: {tx.nextDueDate ? format(new Date(tx.nextDueDate), 'MMM dd') : 'N/A'}</span>
+                          <span>Due: {formatDisplayDate(tx.nextDueDate, 'MMM dd')}</span>
+                          {tx.isActive && isBeforeToday(tx.nextDueDate) && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <AlertTriangle size={10} />
+                              Overdue
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -575,7 +613,7 @@ function RecurringTransactions() {
                           <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => handleToggle(tx.id)}
+                          onClick={() => handleToggle(tx)} disabled={busyId === tx.id}
                           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                             tx.isActive
                               ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
@@ -587,7 +625,7 @@ function RecurringTransactions() {
                         </button>
                         {tx.isActive && (
                           <button
-                            onClick={() => handleExecute(tx.id)}
+                            onClick={() => handleExecute(tx)} disabled={busyId === tx.id}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                           >
                             <Sparkles size={12} />
@@ -595,7 +633,7 @@ function RecurringTransactions() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(tx.id)}
+                          onClick={() => handleDelete(tx)} disabled={busyId === tx.id}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
                         >
                           <Trash2 size={12} />
@@ -630,10 +668,7 @@ function RecurringTransactions() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setShowModal(false)
-                  setFormErrors({})
-                }}
+                onClick={closeModal}
                 className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors"
                 aria-label="Close modal"
               >
@@ -773,7 +808,7 @@ function RecurringTransactions() {
                     type="date"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    min={format(new Date(), 'yyyy-MM-dd')}
+                    min={editingTransaction ? undefined : todayString()}
                     className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold text-slate-800 transition-all focus:outline-none focus:ring-4 ${
                       formErrors.startDate
                         ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/15 bg-rose-50/20'
@@ -874,6 +909,13 @@ function RecurringTransactions() {
                 </div>
               </div>
 
+              {accounts.length === 0 && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle size={14} />
+                  <span>You have no accounts yet. Create one on the Accounts page before scheduling a transaction.</span>
+                </div>
+              )}
+
               {/* Notes */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -908,7 +950,7 @@ function RecurringTransactions() {
                       </span>
                     </div>
                     <p className="text-slate-600 text-xs">
-                      Auto-posts <strong className="text-slate-900">{formatCurrency(formData.amount)}</strong> on every {formData.recurrenceType.toLowerCase()} cycle starting {formData.startDate ? format(new Date(formData.startDate), 'MMM dd, yyyy') : 'start date'}.
+                      Auto-posts <strong className="text-slate-900">{formatCurrency(formData.amount)}</strong> on every {formData.recurrenceType.toLowerCase()} cycle starting {formData.startDate ? formatDisplayDate(formData.startDate) : 'start date'}.
                     </p>
                   </div>
                 </div>
@@ -918,10 +960,7 @@ function RecurringTransactions() {
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false)
-                    setFormErrors({})
-                  }}
+                  onClick={closeModal}
                   className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm transition-all"
                   disabled={submitting}
                 >
@@ -933,7 +972,10 @@ function RecurringTransactions() {
                   className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-purple-600/25 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
-                    <span>Saving...</span>
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Saving...</span>
+                    </>
                   ) : editingTransaction ? (
                     <>
                       <CheckCircle size={16} />

@@ -49,3 +49,26 @@ export const showErrorToast = (error, defaultCode = '500') => {
   })
 }
 
+/**
+ * Human-readable message for a failed request.
+ * The API only puts safe, user-facing text in 4xx responses (validation, "insufficient balance", ...),
+ * so those are shown as-is. Server (5xx) and network failures get a friendly generic message.
+ * @param {*} error - The axios error
+ * @param {string} fallback - Message used when nothing better is available
+ */
+export const getServerMessage = (error, fallback = 'Something went wrong. Please try again.') => {
+  const status = error?.response?.status
+  if (!error?.response) {
+    return 'Cannot reach the server. Check your internet connection and try again.'
+  }
+  if (status === 429) {
+    return 'Too many requests. Please wait a moment and try again.'
+  }
+  const message = error.response.data?.error || error.response.data?.message
+  if (status >= 400 && status < 500 && typeof message === 'string' && message.trim()) {
+    return message.replace(/^Error Code:\s*/i, '').trim() || fallback
+  }
+  return fallback
+}
+
+
