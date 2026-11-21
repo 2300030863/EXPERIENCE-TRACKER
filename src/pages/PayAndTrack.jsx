@@ -32,8 +32,14 @@ import {
   Laptop,
   Apple,
   Eye,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ClipboardPaste,
+  ChevronDown,
+  ChevronUp,
+  Info
 } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { paymentAPI, categoryAPI, accountAPI } from '../services/api'
 import { getServerMessage } from '../utils/errorHandler'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
@@ -142,27 +148,55 @@ function PayAndTrack() {
     isFavorite: false,
   })
 
-  // Detect visibility changes (when user returns from external UPI app)
+  // Detect app switch & return from external UPI apps across Android, iOS, and Web
   useEffect(() => {
+    const triggerReturnIfAway = () => {
+      if (activePaymentAttempt && appSwitchTimestampRef.current) {
+        const timeAway = Date.now() - appSwitchTimestampRef.current
+        // If user was away for at least 1.2 seconds, they switched to the external app and returned
+        if (timeAway > 1200) {
+          handleUserReturnedFromApp(activePaymentAttempt)
+        }
+      }
+    }
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // User came back to the tab
-        if (activePaymentAttempt && appSwitchTimestampRef.current) {
-          const timeAway = Date.now() - appSwitchTimestampRef.current
-          // If user was away for at least 1.5 seconds, they switched to the external app and returned
-          if (timeAway > 1500) {
-            handleUserReturnedFromApp(activePaymentAttempt)
-          }
-        }
+        triggerReturnIfAway()
       } else if (document.visibilityState === 'hidden') {
-        // User switched away to external app
         appSwitchTimestampRef.current = Date.now()
       }
     }
 
+    const handleWindowFocus = () => {
+      triggerReturnIfAway()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleWindowFocus)
+
+    // Capacitor Native Android & iOS app state listener
+    let nativeListener = null
+    try {
+      if (Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform()) {
+        App.addListener('appStateChange', (state) => {
+          if (state && state.isActive) {
+            triggerReturnIfAway()
+          } else {
+            appSwitchTimestampRef.current = Date.now()
+          }
+        }).then((l) => {
+          nativeListener = l
+        }).catch(() => {})
+      }
+    } catch (_) {}
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleWindowFocus)
+      if (nativeListener && typeof nativeListener.remove === 'function') {
+        nativeListener.remove()
+      }
     }
   }, [activePaymentAttempt])
 
@@ -473,6 +507,20 @@ function PayAndTrack() {
     setUserConfirmationNote(refId)
     setActivePaymentAttempt(null)
 
+    // Attempt non-intrusive clipboard auto-read if user copied a 12-digit bank UTR
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const clip = await navigator.clipboard.readText()
+        if (clip && typeof clip === 'string') {
+          const trimmed = clip.trim()
+          if (/^\d{12}$/.test(trimmed) || /^(UPI|TXN)[0-9A-Za-z_-]{6,}$/i.test(trimmed)) {
+            setUserConfirmationNote(trimmed)
+            toast.success(`Autofilled bank reference: ${trimmed}`)
+          }
+        }
+      }
+    } catch (_) {}
+
     // Automatically transition status to UNVERIFIED on backend
     try {
       const res = await paymentAPI.updateStatus(payment.id, { status: 'UNVERIFIED' })
@@ -480,6 +528,23 @@ function PayAndTrack() {
       await reloadPayments()
     } catch (_) {
       setReturnedFromAppPayment({ ...payment, status: 'UNVERIFIED', referenceId: refId })
+    }
+  }
+
+  // 1-Tap Paste UTR / Transaction ID from clipboard
+  const handlePasteClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText()
+        if (text && text.trim()) {
+          setUserConfirmationNote(text.trim())
+          toast.success('Pasted from clipboard!')
+          return
+        }
+      }
+      toast.error('Clipboard is empty')
+    } catch (_) {
+      toast.error('Tap allow when prompted to paste from clipboard')
     }
   }
 
@@ -1667,6 +1732,27 @@ function PayAndTrack() {
               {/* Tab 1: Installed UPI Apps */}
               {launchModalTab === 'apps' && (
                 <div className="space-y-2.5 animate-in fade-in">
+                  {/* Universal Copy UPI ID Fallback Banner */}
+                  <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-200 text-left space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                        <ShieldCheck size={14} className="text-indigo-600" />
+                        <span>Direct UPI ID</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(activePaymentAttempt.payment.upiId, 'universal-copy')}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-2xs active:scale-95"
+                      >
+                        {copiedKey === 'universal-copy' ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{copiedKey === 'universal-copy' ? 'Copied UPI ID!' : 'Copy UPI ID'}</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-indigo-900/90 leading-relaxed">
+                      If bank deep-linking is restricted, copy the UPI ID, open your payment app, and paste to pay directly.
+                    </p>
+                  </div>
+
                   {/* Primary Universal "Pay with Any UPI App" */}
                   <button
                     type="button"
@@ -1714,20 +1800,17 @@ function PayAndTrack() {
                     </div>
                   </div>
 
-                  {/* Quick Copy UPI ID Card */}
-                  <div className="p-2.5 rounded-xl bg-slate-100/70 text-xs flex items-center justify-between">
-                    <div className="text-left">
-                      <span className="text-[10px] text-slate-400 block font-medium">Payee UPI ID</span>
-                      <span className="font-mono font-bold text-slate-800">{activePaymentAttempt.payment.upiId}</span>
+                  {/* Anti-Fraud Troubleshooting Tips */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                      <Info size={13} className="text-slate-600" />
+                      <span>Security & Decline Troubleshooting</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(activePaymentAttempt.payment.upiId, 'launch-upi')}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-                    >
-                      {copiedKey === 'launch-upi' ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                      <span>{copiedKey === 'launch-upi' ? 'Copied' : 'Copy'}</span>
-                    </button>
+                    <ul className="list-disc list-inside text-[10px] text-slate-500 space-y-0.5">
+                      <li><strong>Declined for Security Reasons?</strong> NPCI blocks self-transfers (paying your own UPI ID or account on the same phone/SIM). Ensure the payee is a separate recipient.</li>
+                      <li><strong>Accessibility/Screen Recording:</strong> Google Pay blocks transfers if any screen recorder or auto-clicker is active in the background.</li>
+                      <li><strong>Gallery QR Limit:</strong> Bank apps enforce an NPCI limit of ₹2,000 for QR codes uploaded from your phone gallery.</li>
+                    </ul>
                   </div>
                 </div>
               )}
@@ -1751,8 +1834,16 @@ function PayAndTrack() {
                       Generating QR...
                     </div>
                   )}
-                  <p className="text-[11px] text-slate-500">
-                    Scan using Google Pay, PhonePe, Paytm, or BHIM camera
+                  <div className="text-[11px] text-slate-600 flex items-center justify-center gap-2">
+                    <span>Payee: <strong className="text-slate-900">{activePaymentAttempt.payment.recipientName}</strong></span>
+                    <span>•</span>
+                    <span className="text-indigo-600 font-bold">₹{Number(activePaymentAttempt.payment.amount)?.toFixed(2)}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Scan live using Google Pay, PhonePe, Paytm, or BHIM camera.
+                  </p>
+                  <p className="text-[10px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200/60">
+                    NPCI Notice: For QR codes uploaded from photos/gallery, bank apps restrict payments to ₹2,000.
                   </p>
                 </div>
               )}
@@ -1861,9 +1952,19 @@ function PayAndTrack() {
               </div>
 
               <div className="text-left">
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Confirmation Note / Bank UTR (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Confirmation Note / Bank UTR (Optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handlePasteClipboard}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors"
+                  >
+                    <ClipboardPaste size={11} />
+                    <span>Paste UTR</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="e.g. Debited from HDFC Bank, Ref #123456"

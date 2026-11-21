@@ -12,7 +12,9 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
-  HelpCircle
+  HelpCircle,
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react'
 import { parseUpiQr } from '../utils/upiQrParser'
 import toast from 'react-hot-toast'
@@ -27,8 +29,11 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
   const [customNote, setCustomNote] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [scannedFromGallery, setScannedFromGallery] = useState(false)
+  const [galleryScanning, setGalleryScanning] = useState(false)
 
   const html5QrCodeRef = useRef(null)
+  const fileInputRef = useRef(null)
   const scannerContainerId = 'qr-reader-container'
 
   useEffect(() => {
@@ -128,7 +133,7 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
     }
   }
 
-  const handleQrDecoded = async (decodedText) => {
+  const handleQrDecoded = async (decodedText, isGallery = false) => {
     // 1. Stop scanning immediately
     await stopCamera()
 
@@ -137,15 +142,51 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
     if (!result.isValid) {
       setScannerState('ERROR')
       setErrorMessage(result.error)
+      setScannedFromGallery(isGallery)
       return
     }
 
     // 3. Pre-populate parsed data
     setParsedData(result)
+    setScannedFromGallery(isGallery)
     setCustomAmount(result.amount ? String(result.amount) : '')
     setCustomNote(result.note || '')
     setScannerState('PARSED')
     toast.success(`Scanned UPI QR: ${result.recipientName}`)
+  }
+
+  // Handle QR scanning from an image file uploaded from the user's gallery / photos
+  const handleGalleryFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setGalleryScanning(true)
+    setErrorMessage('')
+
+    try {
+      await stopCamera()
+
+      // Instantiating Html5Qrcode on the container for file scanning
+      let html5QrCode = html5QrCodeRef.current
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode(scannerContainerId)
+        html5QrCodeRef.current = html5QrCode
+      }
+
+      const decodedText = await html5QrCode.scanFile(file, true)
+      await handleQrDecoded(decodedText, true)
+    } catch (err) {
+      console.warn('Gallery QR scan error:', err)
+      await stopCamera()
+      setScannerState('ERROR')
+      setScannedFromGallery(true)
+      setErrorMessage('Could not find a valid UPI QR code in the selected photo. Please make sure the QR is clear and uncropped.')
+    } finally {
+      setGalleryScanning(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   const handleConfirmScanPayment = () => {
@@ -188,6 +229,7 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
     await stopCamera()
     setScannerState('READY')
     setParsedData(null)
+    setScannedFromGallery(false)
     setErrorMessage('')
     onClose()
   }
@@ -245,15 +287,28 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
 
             <div className="pt-2 space-y-2">
               <button
+                type="button"
                 onClick={handleStartScanning}
                 className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
               >
                 <Camera size={16} />
                 <span>Enable Camera & Scan</span>
               </button>
+
               <button
+                type="button"
+                disabled={galleryScanning}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-700 font-semibold text-xs transition-all shadow-2xs flex items-center justify-center gap-2 active:scale-95"
+              >
+                {galleryScanning ? <Loader2 size={15} className="animate-spin" /> : <ImageIcon size={15} />}
+                <span>{galleryScanning ? 'Analyzing photo...' : 'Choose QR from Photos / Gallery'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleClose}
-                className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700"
+                className="w-full py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
               >
                 Cancel
               </button>
@@ -272,6 +327,7 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
 
               {hasTorch && (
                 <button
+                  type="button"
                   onClick={handleToggleTorch}
                   className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                     torchOn
@@ -300,12 +356,24 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
               Align the merchant QR code inside the box to scan automatically.
             </p>
 
-            <button
-              onClick={handleClose}
-              className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
-            >
-              Cancel Scanning
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                disabled={galleryScanning}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors shadow-2xs"
+              >
+                <ImageIcon size={14} className="text-indigo-600" />
+                <span>Pick from Gallery</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
@@ -318,13 +386,36 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
               </div>
               <div>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">
-                  Valid UPI QR Verified
+                  {scannedFromGallery ? 'Gallery QR Verified' : 'Valid UPI QR Verified'}
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-1">
                   Pay {parsedData.recipientName}
                 </h3>
               </div>
             </div>
+
+            {/* NPCI Gallery Advisory Banner if scanned from photo */}
+            {scannedFromGallery && (
+              <div className={`p-3 rounded-2xl border text-xs space-y-1 ${
+                (Number(customAmount) || parsedData.amount || 0) > 2000
+                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              }`}>
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck size={14} className={(Number(customAmount) || parsedData.amount || 0) > 2000 ? 'text-amber-700' : 'text-emerald-700'} />
+                  <span>
+                    {(Number(customAmount) || parsedData.amount || 0) > 2000
+                      ? 'NPCI ₹2,000 Gallery Notice'
+                      : 'Safe Amount: Within NPCI ₹2,000 Threshold'}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  {(Number(customAmount) || parsedData.amount || 0) > 2000
+                    ? 'Most Indian UPI apps (Google Pay, PhonePe) restrict gallery QR payments above ₹2,000 for fraud protection. If declined by your bank, point your camera to scan live or pay using the UPI ID directly.'
+                    : 'This amount is within the NPCI security threshold for gallery QR uploads.'}
+                </p>
+              </div>
+            )}
 
             {/* Payee Info Card */}
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
@@ -456,15 +547,28 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
 
             <div className="pt-2 space-y-2">
               <button
+                type="button"
                 onClick={handleStartScanning}
                 className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5"
               >
                 <RefreshCw size={14} />
-                <span>Try Scanning Again</span>
+                <span>Try Camera Scanning Again</span>
               </button>
+
               <button
+                type="button"
+                disabled={galleryScanning}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all flex items-center justify-center gap-1.5"
+              >
+                <ImageIcon size={14} className="text-indigo-600" />
+                <span>Choose Another Photo from Gallery</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleClose}
-                className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700"
+                className="w-full py-1 text-xs font-semibold text-slate-500 hover:text-slate-700"
               >
                 Close
               </button>
@@ -472,6 +576,15 @@ function QrScannerModal({ isOpen, onClose, onScanSuccess, categories = [], accou
           </div>
         )}
         </div>
+
+        {/* Hidden File Input for Gallery / Photo QR scanning */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleGalleryFileSelect}
+        />
       </div>
     </div>
   )

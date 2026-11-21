@@ -35,8 +35,14 @@ export function detectPlatform() {
   }
 
   // 3. Touch device detection fallback (e.g. tablet or mobile browser without standard UA)
-  if (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 2) {
+  if (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1) {
     if (/Macintosh/.test(ua)) return 'ios'; // iPad Safari desktop mode
+    return 'android'; // Android tablet / responsive emulator
+  }
+
+  // 4. Responsive viewport mobile emulation fallback (width <= 768)
+  if (typeof window !== 'undefined' && window.innerWidth && window.innerWidth <= 768) {
+    return 'android';
   }
 
   return 'desktop';
@@ -86,12 +92,23 @@ export function buildUpiPaymentUri({ upiId, recipientName, amount, note = '', re
 
 /**
  * Returns app-specific deep links alongside standard universal UPI URI
+ * CRITICAL FOR P2P TRANSFERS:
+ * For direct transfers to personal VPAs (e.g. friend@okaxis), omitting `tr=` from the launch intent
+ * is essential. When Google Pay / PhonePe see a `tr=` parameter without an authorized merchant code (mc=),
+ * their fraud filters flag it as an unverified/fake merchant payment and decline with:
+ * "Your payment is declined for security reasons. Please try using a mobile number, UPI ID, or QR code."
  */
 export function getUpiAppLinks({ upiId, recipientName, amount, note = '', referenceId = '' }) {
-  const genericUri = buildUpiPaymentUri({ upiId, recipientName, amount, note, referenceId });
-  const queryPart = genericUri.replace('upi://pay?', '');
+  // Clean P2P URI without tr parameter for app launchers and QR scanning
+  const cleanUri = buildUpiPaymentUri({ upiId, recipientName, amount, note, referenceId: '' });
+  const queryPart = cleanUri.replace('upi://pay?', '');
 
-  // NPCI standard URI and OS-level schemes
+  // Tracked URI (with referenceId) for internal auditing and record keeping
+  const trackedUri = referenceId
+    ? buildUpiPaymentUri({ upiId, recipientName, amount, note, referenceId })
+    : cleanUri;
+
+  // NPCI standard URI and OS-level schemes (clean P2P without suspicious merchant tr= parameter)
   const gpayUri = `tez://upi/pay?${queryPart}`;
   const phonepeUri = `phonepe://pay?${queryPart}`;
   const paytmUri = `paytmmp://pay?${queryPart}`;
@@ -104,7 +121,8 @@ export function getUpiAppLinks({ upiId, recipientName, amount, note = '', refere
   const paytmAndroid = `intent://pay?${queryPart}#Intent;scheme=upi;package=net.one97.paytm;end`;
 
   return {
-    generic: genericUri,
+    generic: cleanUri,
+    tracked: trackedUri,
     gpay: gpayUri,
     phonepe: phonepeUri,
     paytm: paytmUri,
