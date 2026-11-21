@@ -1800,16 +1800,43 @@ function PayAndTrack() {
                     </div>
                   </div>
 
+                  {/* Self-Transfer Warning Banner */}
+                  {activePaymentAttempt.payment.upiId?.includes('9652535947') ||
+                   (user?.username && activePaymentAttempt.payment.recipientName?.toLowerCase().includes(user.username.toLowerCase())) ? (
+                    <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 text-left text-xs text-amber-900 space-y-1.5">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                        <AlertCircle size={15} className="text-amber-700" />
+                        <span>Self-Payment Alert (Causes Security Decline)</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-amber-900/90">
+                        You are sending money to your own UPI ID (<strong className="font-mono">{activePaymentAttempt.payment.upiId}</strong>). 
+                        PhonePe & Google Pay strictly block paying to your own registered mobile number or SIM via app links.
+                      </p>
+                      <p className="text-[11px] font-semibold text-amber-950">
+                        💡 To test successfully: Send to a friend or family member's UPI ID, or use PhonePe's in-app <em>"To Self Account"</em> option.
+                      </p>
+                    </div>
+                  ) : null}
+
                   {/* Anti-Fraud Troubleshooting Tips */}
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600 space-y-1">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
                       <Info size={13} className="text-slate-600" />
-                      <span>Security & Decline Troubleshooting</span>
+                      <span>PhonePe & GPay Security Decline Solutions</span>
                     </div>
-                    <ul className="list-disc list-inside text-[10px] text-slate-500 space-y-0.5">
-                      <li><strong>Declined for Security Reasons?</strong> NPCI blocks self-transfers (paying your own UPI ID or account on the same phone/SIM). Ensure the payee is a separate recipient.</li>
-                      <li><strong>Accessibility/Screen Recording:</strong> Google Pay blocks transfers if any screen recorder or auto-clicker is active in the background.</li>
-                      <li><strong>Gallery QR Limit:</strong> Bank apps enforce an NPCI limit of ₹2,000 for QR codes uploaded from your phone gallery.</li>
+                    <ul className="list-disc list-inside text-[10px] text-slate-600 space-y-1">
+                      <li>
+                        <strong>"Declined for Security Reasons"?</strong> PhonePe blocks 3rd-party links when paying personal or self accounts.
+                      </li>
+                      <li>
+                        <strong>Solution 1 (Direct UPI ID):</strong> Tap <strong>"Copy UPI ID"</strong> above, open PhonePe, tap <em>"To UPI ID"</em>, paste and pay.
+                      </li>
+                      <li>
+                        <strong>Solution 2 (QR Scanner):</strong> Tap the <strong>"Scan QR Code"</strong> tab above and scan it using PhonePe's built-in camera scanner.
+                      </li>
+                      <li>
+                        <strong>Solution 3 (Self-Transfers):</strong> If transferring between your own accounts, use PhonePe's <em>"To Self Account"</em> feature.
+                      </li>
                     </ul>
                   </div>
                 </div>
